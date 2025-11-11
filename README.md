@@ -2,11 +2,11 @@
  
 > Aplicación web/móvil para la reserva y gestión de citas en una barbería. 
  
-## 🚀 Visión General del Proyecto
+##  Visión General del Proyecto
  
 Este proyecto tiene como objetivo digitalizar el proceso de reserva de citas, permitiendo a los clientes seleccionar servicios, horarios y barberos, y a los administradores gestionar la disponibilidad y los horarios.
  
-## 🛠️ Tecnologías Utilizadas
+##  Tecnologías Utilizadas
  
 | Área | Tecnología | Versión |
 | :--- | :--- | :--- |
@@ -15,7 +15,7 @@ Este proyecto tiene como objetivo digitalizar el proceso de reserva de citas, pe
 | **Base de Datos** | [E.g., PostgreSQL, MySQL, MongoDB] | [Versión] |
 | **Despliegue** | [E.g., Docker, Heroku, Netlify] | [Versión] |
  
-## ⚙️ Guía de Instalación y Ejecución Local
+##  Guía de Instalación y Ejecución Local
  
 Sigue estos pasos para tener una copia del proyecto ejecutándose en tu máquina local:
  
@@ -35,7 +35,7 @@ Sigue estos pasos para tener una copia del proyecto ejecutándose en tu máquina
  
 La aplicación estará disponible en `http://localhost:[PUERTO]`
  
-## 👥 Colaboradores
+##  Colaboradores
  
 | Nombre | Rol en el Proyecto | GitHub |
 | :--- | :--- | :--- |
