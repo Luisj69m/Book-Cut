@@ -1,18 +1,6 @@
-graph LR
-    A[Cliente]
-    B[Administrador / Barbero]
-    
-    subgraph BarberApp
-        S[Sistema de Gestión de Citas]
-    end
-    
-    E(Email y Notificaciones)
-    P(Pasarela de Pago E2+)
-    O(Autenticación / Oauth)
-
-    A -- 1. Realiza Reservas --> S
-    A -- 2. Recibe Recordatorios --> E
-    B -- 3. Gestiona Agenda --> S
-    S -- 4. Envía Confirmaciones --> E
-    S -- 5. Autentica Usuarios --> O
-    S -- 6. (Futuro) Procesa Pagos --> P
+flowchart TB
+    User["Cliente"] -->|Reserva citas y consulta horarios| App["Aplicacion de Gestion de Citas"]
+    Barber["Barbero o Peluquero"] -->|Gestiona citas y horarios| App
+    Admin["Administrador"] -->|Configura servicios y personal| App
+    App -->|Envio de recordatorios| Email["Servicio de Email"]
+    App -->|Sincronizacion de calendario| CalendarAPI["API Externa de Calendario"]

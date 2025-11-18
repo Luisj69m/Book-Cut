@@ -1,31 +1,32 @@
-graph TD
-subgraph Cliente App Móvil
-A[Reserva de Cita]
-end
+flowchart LR
 
-subgraph Administrador App Web
-B[Agenda Diaria E1]
-end
+    subgraph Client["Cliente"]
+        MobileApp["App Movil"]
+        WebApp["Aplicacion Web"]
+    end
 
-subgraph Backend Node.js API
-C[Lógica de Negocio]
-end
+    subgraph Backend["Backend API REST"]
+        AuthService["Servicio Autenticacion"]
+        BookingService["Servicio Gestion Citas"]
+        StaffService["Servicio Gestion Personal"]
+        NotificationService["Servicio Notificaciones"]
+        BarbershopService["Servicio Gestion Barberias"]
+    end
 
-subgraph Persistencia
-D[PostgreSQL DB]
-end
+    subgraph Database["Base de Datos"]
+        BarbershopsTable["Tabla Barberias"]
+        UsersTable["Tabla Usuarios"]
+        BookingsTable["Tabla Citas"]
+        StaffTable["Tabla Personal"]
+        ServicesTable["Tabla Servicios"]
+    end
 
-subgraph Infraestructura
-E[Servicio Notificaciones]
-end
+    subgraph ExternalSystems["Sistemas Externos"]
+        EmailProvider["Proveedor Email"]
+        CalendarIntegration["Integracion Calendario"]
+    end
 
-A --> C
-B --> C
-C --> D
-C --> E
-
-style A fill:#D2E0F7
-style B fill:#D2E0F7
-style C fill:#FFE7B8
-style D fill:#B9FBC0
-style E fill:#F2C6C6
+    Client --> Backend
+    Backend --> Database
+    Backend --> EmailProvider
+    Backend --> CalendarIntegration
