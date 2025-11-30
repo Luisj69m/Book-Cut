@@ -1,4 +1,4 @@
-# 💈 [Nombre de tu App de Barbería] ✂️
+# 💈 Book & Cut ✂️
  
 > Aplicación web/móvil para la reserva y gestión de citas en una barbería. 
  
@@ -10,9 +10,9 @@ Este proyecto tiene como objetivo digitalizar el proceso de reserva de citas, pe
  
 | Área | Tecnología | Versión |
 | :--- | :--- | :--- |
-| **Frontend** | [E.g., React, Vue.js, HTML/CSS] | [Versión] |
-| **Backend** | [E.g., Node.js (Express), Python (Django), PHP (Laravel)] | [Versión] |
-| **Base de Datos** | [E.g., PostgreSQL, MySQL, MongoDB] | [Versión] |
+| **Frontend** | Figma | [Versión] |
+| **Backend** | Java | [Versión] |
+| **Base de Datos** | MySQL | [Versión] |
 | **Despliegue** | [E.g., Docker, Heroku, Netlify] | [Versión] |
  
 ##  Guía de Instalación y Ejecución Local
@@ -21,8 +21,8 @@ Sigue estos pasos para tener una copia del proyecto ejecutándose en tu máquina
  
 1.  **Clonar el Repositorio:**
     ```bash
-    git clone [https://www.youtube.com/watch?v=eQMcIGVc8N0](https://www.youtube.com/watch?v=eQMcIGVc8N0)
-    cd [nombre-del-repo]
+    git clone [https://github.com/Luisj69m/Book-Cut]
+    cd [Book-Cut]
     ```
 2.  **Instalar Dependencias:**
     * *Frontend:* `cd frontend/ && npm install`
@@ -39,5 +39,6 @@ La aplicación estará disponible en `http://localhost:[PUERTO]`
  
 | Nombre | Rol en el Proyecto | GitHub |
 | :--- | :--- | :--- |
-| [Nombre Miembro 1] | [E.g., Desarrollador Frontend] | [@usuario-github-1] |
-| [Nombre Miembro 2] | [E.g., Desarrollador Backend/DBA] | [@usuario-github-2] |
+| Daniel Moñino García | [E.g., Desarrollador Frontend] | daniimg8 |
+| Luis José Marcano Fuentes | [E.g., Desarrollador Backend/DBA] | Luisj69m |
+| Iván Rubio Murillo | [E.g., Desarrollador Backend/DBA] | ivaanrubio47 |
