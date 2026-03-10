@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  servidor_mysql:
+    image: mysql:8.0
+    container_name: contenedor_mysql_bookcut
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: base_datos_bookcut
+    ports:
+      - "3307:3306"
+    restart: always
