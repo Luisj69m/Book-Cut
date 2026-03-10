@@ -13,8 +13,9 @@ public class CitaController {
         this.servicioDeCitas = servicioDeCitas;
     }
     @PostMapping("/reservar")
-    public Cita reservarCita(@RequestBody Cita datosDeLaCita) {
-        return servicioDeCitas.crearNuevaCita(datosDeLaCita);
+    public Cita reservar(@RequestBody Cita nuevaCita) {
+        // Asegúrate de llamar a crearNuevaCita del SERVICIO, no al save del repositorio
+        return servicioDeCitas.crearNuevaCita(nuevaCita);
     }
     @GetMapping("/historial/{idUsuario}")
     public List<Cita> verHistorial(@PathVariable Long idUsuario) {
