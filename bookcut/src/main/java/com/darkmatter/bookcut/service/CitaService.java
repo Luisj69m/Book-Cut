@@ -35,4 +35,19 @@ public class CitaService {
         // Aquí Dani consultará si el barbero ya tiene una cita en ese rango exacto
         return !repositorioDeCitas.existsByBarberoAsignado_IdPerfilBarberoAndFechaHoraCita(idBarbero, fechaHora);
     }
+
+    public void cancelarCita(Long idCita) {
+        if (!repositorioDeCitas.existsById(idCita)) {
+            throw new RuntimeException("No se puede cancelar: La cita no existe.");
+        }
+        repositorioDeCitas.deleteById(idCita);
+    }
+
+    public List<Cita> obtenerCitasPorBarbero(Long idBarbero) {
+        return repositorioDeCitas.findByBarberoAsignado_IdPerfilBarbero(idBarbero);
+    }
+
+    public List<Cita> obtenerCitasPorUsuario(Long idUsuario) {
+        return repositorioDeCitas.findByClienteReserva_IdUsuario(idUsuario);
+    }
 }

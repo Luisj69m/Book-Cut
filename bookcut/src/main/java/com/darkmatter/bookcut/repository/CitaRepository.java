@@ -7,7 +7,7 @@ import java.util.List;
 @Repository
 public interface CitaRepository extends JpaRepository<Cita, Long> {
     List<Cita> findByClienteReserva_IdUsuario(Long idUsuario);
-
+    List<Cita> findByBarberoAsignado_IdPerfilBarbero(Long idBarbero);
     boolean existsByBarberoAsignado_IdPerfilBarberoAndFechaHoraCita(Long idBarbero, LocalDateTime fechaHora);
 }
 
