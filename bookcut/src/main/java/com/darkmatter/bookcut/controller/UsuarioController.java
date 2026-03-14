@@ -2,23 +2,24 @@ package com.darkmatter.bookcut.controller;
 import com.darkmatter.bookcut.model.DatosLogin;
 import com.darkmatter.bookcut.model.Usuario;
 import com.darkmatter.bookcut.service.UsuarioService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/usuarios")
 public class UsuarioController {
-    private final UsuarioService servicioDeUsuarios;
-    public UsuarioController(UsuarioService servicioDeUsuarios) {
-        this.servicioDeUsuarios = servicioDeUsuarios;
+
+    private final UsuarioService usuarioService;
+
+    public UsuarioController(UsuarioService usuarioService) {
+        this.usuarioService = usuarioService;
     }
-    @PostMapping("/registro")
-    public Usuario registrarUsuario(@RequestBody Usuario datosDelNuevoUsuario) {
-        return servicioDeUsuarios.registrarNuevoUsuario(datosDelNuevoUsuario);
-    }
+
     @PostMapping("/login")
-    public Usuario iniciarSesion(@RequestBody DatosLogin datosDeAcceso) {
-        return servicioDeUsuarios.verificarCredenciales(datosDeAcceso.getCorreoElectronico(), datosDeAcceso.getContrasenaUsuario());
+    public Usuario login(@RequestBody Usuario credenciales) {
+        return usuarioService.validarLogin(
+                credenciales.getCorreoElectronico(),
+                credenciales.getContrasenaUsuario()
+        );
     }
 }
