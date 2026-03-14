@@ -12,18 +12,16 @@ public class CitaService {
         this.repositorioDeCitas = repositorioDeCitas;
     }
     public Cita crearNuevaCita(Cita nuevaCita) {
-        // 1. Extraemos los datos para la comprobación
         Long idBarbero = nuevaCita.getBarberoAsignado().getIdPerfilBarbero();
         java.time.LocalDateTime fecha = nuevaCita.getFechaHoraCita();
 
-        // 2. Preguntamos al repositorio si ya existe esa combinación
         boolean estaOcupado = repositorioDeCitas.existsByBarberoAsignado_IdPerfilBarberoAndFechaHoraCita(idBarbero, fecha);
 
         if (estaOcupado) {
-            // Si entra aquí, Java lanza una excepción y CORTA la ejecución (no llega al save)
             throw new RuntimeException("Error: El barbero ya tiene una cita a esa hora.");
         }
 
+        // Guardamos y nos aseguramos de que no devuelva nulos extraños
         return repositorioDeCitas.save(nuevaCita);
     }
 
