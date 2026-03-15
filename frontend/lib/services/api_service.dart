@@ -6,9 +6,12 @@ import '../utils/api_config.dart'; // Importamos el archivo que acabamos de crea
 class ApiService {
 
   // 0. Iniciar Sesión (Login)
+  // 0. Iniciar Sesión (Login) con chivato
   Future<Map<String, dynamic>> login(String email, String password) async {
+    print("Intentando LOGIN con email: $email"); // Chivato 1
+
     final response = await http.post(
-      Uri.parse(ApiConfig.login), // Usamos la variable de Iván
+      Uri.parse(ApiConfig.login),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "correoElectronico": email,
@@ -16,31 +19,39 @@ class ApiService {
       }),
     );
 
+    // Chivato 2: ¿Qué nos contesta el servidor de Iván?
+    print("Respuesta del servidor (Status): ${response.statusCode}");
+    print("Respuesta del servidor (Body): ${response.body}");
+
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Correo o contraseña incorrectos');
+      // Le añadimos el status code al error para saber si es un 401, 404, 500...
+      throw Exception('Error al iniciar sesión. Código de Java: ${response.statusCode}');
     }
   }
 
   // --- AÑADIR AL API SERVICE ---
   // Registro de nuevos usuarios
-  Future<bool> registrarUsuario(String email, String password, String rol) async {
+  Future<bool> registrarUsuario(String nombre, String apellidos, String email, String password, String telefono, String rol) async {
     final response = await http.post(
       Uri.parse(ApiConfig.registrar),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
+        "nombre": nombre,
+        "apellidos": apellidos,
+        "telefono": telefono,
         "correoElectronico": email,
         "contrasenaUsuario": password,
-        "rolUsuario": rol // Aquí le pasaremos "CLIENTE" o "BARBERO"
+        "rolUsuario": rol // ¡Súper importante que le llegue "BARBERO" o "CLIENTE"!
       }),
     );
 
-    // Si devuelve un 200 (OK) o un 201 (Creado)
     if (response.statusCode == 200 || response.statusCode == 201) {
       return true;
     } else {
-      throw Exception('Error al registrar el usuario en el servidor');
+      print("Error de Java: ${response.body}"); // Esto nos chivará si falta algún campo más
+      throw Exception('Error al registrar');
     }
   }
 
@@ -64,33 +75,39 @@ class ApiService {
     }
   }
 
-  // --- ÚNICO MÉTODO PARA RESERVAR ---
-  Future<void> reservarCita(String fecha, String hora, String servicio, String precio) async {
+  // Añadimos el int barberiaId a los parámetros
+  Future<void> reservarCita(String fecha, String hora, String servicio, String precio, int barberiaId) async {
     try {
+      List<String> partesFecha = fecha.split('/');
+      String dia = partesFecha[0].padLeft(2, '0');
+      String mes = partesFecha[1].padLeft(2, '0');
+      String anio = partesFecha[2];
+      String fechaFormatoJava = "$anio-$mes-${dia}T$hora:00";
+
       final response = await http.post(
-        Uri.parse(ApiConfig.reservarCita), // Usamos tu variable de Config
+        Uri.parse(ApiConfig.reservarCita),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "fechaCita": fecha,
-          "horaCita": hora,
-          "servicio": servicio,
-          "precio": precio,
-          "clienteId": 1, // El ID estático para la demo
+          "clienteReserva": {"idUsuario": 1},
+
+          // AQUÍ ES DONDE HABLAMOS EL IDIOMA DE IVÁN
+          // Si su modelo Java espera "barberoAsignado", lo ponemos así.
+          // Y le inyectamos la variable barberiaId que viene desde el Home.
+          "barberoAsignado": {"idPerfilBarbero": barberiaId},
+
+          "servicioContratado": {"idServicio": 1},
+          "fechaHoraCita": fechaFormatoJava,
+          "estadoCita": "PENDIENTE"
         }),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return; // Éxito total
-      } else if (response.statusCode == 500) {
-        throw Exception('Esta hora ya está reservada');
+        return;
       } else {
-        throw Exception('Error al guardar la cita en el servidor');
+        throw Exception('Error del servidor: ${response.statusCode}');
       }
     } catch (e) {
-      // Si no hay internet o falla Ngrok, relanzamos el error para que la pantalla lo vea
-      throw Exception(e.toString().contains('is not a subtype')
-          ? 'Error de formato en los datos'
-          : 'Error de conexión: Verifica Ngrok');
+      throw Exception('Fallo de conexión: $e');
     }
   }
 

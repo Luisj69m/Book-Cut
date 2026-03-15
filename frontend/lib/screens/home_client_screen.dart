@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'calendar_client_screen.dart';
+import 'appointments_screen.dart';
+import 'settings_screen.dart';
+import 'profile_client_screen.dart'; // Importamos la pantalla de perfil
 
 class HomeClientScreen extends StatefulWidget {
   const HomeClientScreen({super.key});
@@ -9,7 +12,6 @@ class HomeClientScreen extends StatefulWidget {
 }
 
 class _HomeClientScreenState extends State<HomeClientScreen> {
-  // Controlador para el buscador
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -21,7 +23,6 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Evitamos que el teclado empuje los iconos del menú inferior
       resizeToAvoidBottomInset: false,
       body: Container(
         width: double.infinity,
@@ -38,35 +39,45 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // --- HEADER (Perfil y Logo) ---
+              // --- HEADER ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Icono de perfil a la izquierda
+                    // --- AVATAR CON NAVEGACIÓN AL PERFIL ---
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.pinkAccent.withOpacity(0.5), width: 2),
-                        ),
-                        child: const CircleAvatar(
-                          backgroundColor: Colors.black87,
-                          radius: 20,
-                          child: Icon(Icons.person, color: Colors.white54, size: 25),
+                      child: GestureDetector(
+                        onTap: () {
+                          // NAVEGACIÓN A LA PANTALLA DE PERFIL
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const ProfileClientScreen()),
+                          );
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.pinkAccent.withOpacity(0.5), width: 2),
+                          ),
+                          child: const CircleAvatar(
+                            backgroundColor: Colors.black87,
+                            radius: 20,
+                            child: Icon(Icons.person, color: Colors.white54, size: 25),
+                          ),
                         ),
                       ),
                     ),
-                    // Logo en el centro
+
+                    // --- LOGO CENTRAL ---
                     Container(
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(color: Colors.black38, blurRadius: 10, offset: const Offset(0, 5))
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black38, blurRadius: 10, offset: Offset(0, 5))
                           ]
                       ),
                       child: ClipOval(
@@ -77,9 +88,6 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                 ),
               ),
 
-              // --- TEXTO BOOK & CUT ---
-              // Nota: Como en tu diseño tiene un estilo de velocidad, le he puesto una fuente itálica gruesa.
-              // Si tenéis una imagen para este texto, podéis cambiar este Text por un Image.asset()
               const Text(
                 "BOOK & CUT",
                 style: TextStyle(
@@ -122,36 +130,47 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5))
+                        ]
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Cabecera de la tarjeta
                         const Padding(
                           padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("Barberías", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              Text("Barberías", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                               SizedBox(height: 5),
-                              Text("Seleccione la barbería en la que desea reservar", style: TextStyle(fontSize: 13, color: Colors.black87)),
+                              Text("Seleccione la barbería en la que desea reservar", style: TextStyle(fontSize: 13, color: Colors.black54)),
                             ],
                           ),
                         ),
 
-                        const Divider(color: Colors.black26, thickness: 1, indent: 20, endIndent: 20),
+                        const Divider(color: Colors.black12, thickness: 1, indent: 20, endIndent: 20),
 
-                        // Lista de Barberías (Mockeada según tu diseño)
+                        // --- LISTA DE BARBERÍAS ---
                         Expanded(
                           child: ListView(
                             padding: const EdgeInsets.only(top: 0),
+                            physics: const BouncingScrollPhysics(),
                             children: [
-                              _buildBarberiaItem("La Rodola", "Lunes - Sábado"),
-                              _buildBarberiaItem("Peine Jr", "Lunes - Sábado"),
-                              // La línea final
-                              const Divider(color: Colors.black26, thickness: 1, indent: 20, endIndent: 20),
+                              _buildBarberiaItem(
+                                  1,
+                                  "La Rodola",
+                                  "Lunes - Sábado",
+                                  "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=500&auto=format&fit=crop&q=60"
+                              ),
+                              _buildBarberiaItem(
+                                  2,
+                                  "Peine Jr",
+                                  "Lunes - Sábado",
+                                  "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=500&auto=format&fit=crop&q=60"
+                              ),
                             ],
                           ),
                         ),
@@ -163,44 +182,8 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
 
               const SizedBox(height: 20),
 
-              // --- MENÚ INFERIOR (Bottom Navigation) ---
-              Padding(
-                padding: const EdgeInsets.only(bottom: 20.0, top: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Icono Casa
-                    IconButton(
-                      icon: const Icon(Icons.home_outlined, color: Colors.white, size: 32),
-                      onPressed: () {},
-                    ),
-                    // Icono Calendario (con el 15 dentro)
-                    IconButton(
-                      icon: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          const Icon(Icons.calendar_today_outlined, color: Colors.white, size: 30),
-                          Positioned(
-                            top: 10,
-                            child: Text("15", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                          )
-                        ],
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const CalendarClientScreen()),
-                        );
-                      },
-                    ),
-                    // Icono Ayuda
-                    IconButton(
-                      icon: const Icon(Icons.help_outline, color: Colors.white, size: 32),
-                      onPressed: () {},
-                    ),
-                  ],
-                ),
-              )
+              // --- MENÚ INFERIOR ---
+              _buildBottomNavBar(context, activeIndex: 0),
             ],
           ),
         ),
@@ -208,17 +191,107 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     );
   }
 
-  // Widget para construir cada fila de la lista rápido
-  Widget _buildBarberiaItem(String nombre, String horario) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 25, vertical: 5),
-      leading: const Icon(Icons.star_border, color: Colors.amber, size: 28),
-      title: Text(nombre, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-      subtitle: Text(horario, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+  // --- WIDGET DE LA BARBERÍA ---
+  Widget _buildBarberiaItem(int id, String nombre, String horario, String imageUrl) {
+    return InkWell(
       onTap: () {
-        // TODO: Navegar a la pantalla de reservar cita
-        print("Has tocado en $nombre");
+        // Navegación al calendario pasando los datos
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CalendarClientScreen(
+              barberiaId: id,
+              barberiaNombre: nombre,
+            ),
+          ),
+        );
       },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                imageUrl,
+                width: 65,
+                height: 65,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 65, height: 65, color: Colors.grey.shade200,
+                  child: const Icon(Icons.storefront, color: Colors.grey),
+                ),
+              ),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(nombre, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 16),
+                      const SizedBox(width: 4),
+                      Text("5.0", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey.shade800)),
+                      const SizedBox(width: 8),
+                      Text(horario, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey.shade400),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- BARRA INFERIOR ---
+  Widget _buildBottomNavBar(BuildContext context, {required int activeIndex}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20.0, top: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          IconButton(
+            icon: Icon(Icons.home_outlined, color: activeIndex == 0 ? const Color(0xFF2962FF) : Colors.white, size: 32),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: Icon(Icons.receipt_long_outlined, color: activeIndex == 1 ? const Color(0xFF2962FF) : Colors.white, size: 30),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AppointmentsScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(Icons.calendar_today_outlined, color: activeIndex == 2 ? const Color(0xFF2962FF) : Colors.white, size: 30),
+                const Positioned(top: 10, child: Text("15", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))
+              ],
+            ),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecciona una barbería primero')));
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.help_outline, color: activeIndex == 3 ? const Color(0xFF2962FF) : Colors.white, size: 32),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }

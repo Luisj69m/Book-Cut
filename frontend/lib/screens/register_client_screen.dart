@@ -54,7 +54,15 @@ class _RegisterClientScreenState extends State<RegisterClientScreen> {
 
       // Simulamos la espera del servidor
       // Llamamos de verdad al backend de Iván
-      await ApiService().registrarUsuario(email, password, "CLIENTE");
+      // Llamamos de verdad al backend de Iván rellenando los huecos vacíos
+      await ApiService().registrarUsuario(
+          "Usuario", // Nombre por defecto (por si Java lo exige)
+          "",        // Apellidos vacíos
+          email,     // El email real del campo de texto
+          password,  // La contraseña real
+          "",        // Teléfono vacío
+          "CLIENTE"  // El rol
+      );
 
       if (mounted) {
         Navigator.pushReplacement(

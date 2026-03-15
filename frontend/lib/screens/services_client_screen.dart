@@ -3,9 +3,10 @@ import '../services/api_service.dart';
 import 'home_client_screen.dart'; // Para volver al inicio al terminar
 
 class ServicesClientScreen extends StatefulWidget {
-  final String fechaReserva; // Recibimos la fecha y hora de la pantalla anterior
+  final String fechaReserva;
+  final int barberiaId; // <--- AÑADIMOS ESTO
 
-  const ServicesClientScreen({super.key, required this.fechaReserva});
+  const ServicesClientScreen({super.key, required this.fechaReserva, required this.barberiaId});
 
   @override
   State<ServicesClientScreen> createState() => _ServicesClientScreenState();
@@ -15,34 +16,29 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
   bool _isBooking = false; // Para mostrar ruedita de carga al reservar
 
   void _confirmarReserva(String nombreServicio, String precio) async {
-    setState(() {
-      _isBooking = true;
-    });
+    setState(() { _isBooking = true; });
 
-    // Separamos la fecha de la hora
+    // Separamos la fecha de la hora (Ej: "15/3/2026 a las 10:30")
     List<String> partes = widget.fechaReserva.split(" a las ");
     String soloFecha = partes[0];
     String soloHora = partes[1];
 
     bool exito = false;
     try {
-      // Llamamos al método del servicio
-      await ApiService().reservarCita(soloFecha, soloHora, nombreServicio, precio);
+      // Llamamos al servicio con los 4 datos
+      await ApiService().reservarCita(soloFecha, soloHora, nombreServicio, precio, widget.barberiaId);
       exito = true;
     } catch (e) {
       exito = false;
+      print("Error capturado: $e"); // Para que veas en consola si falla algo
     }
 
     if (mounted) {
-      setState(() {
-        _isBooking = false;
-      });
+      setState(() { _isBooking = false; });
 
       if (exito) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('¡Reserva guardada en la base de datos!'),
-              backgroundColor: Colors.green),
+          const SnackBar(content: Text('¡Reserva guardada en la base de datos!'), backgroundColor: Colors.green),
         );
         Navigator.pushAndRemoveUntil(
           context,
@@ -51,13 +47,11 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Error al conectar con el servidor'),
-              backgroundColor: Colors.red),
+          const SnackBar(content: Text('Error al conectar con el servidor'), backgroundColor: Colors.red),
         );
       }
     }
-  } // <--- AQUÍ FALTABA ESTA LLAVE QUE CERRABA LA FUNCIÓN
+  }
 
   @override
   Widget build(BuildContext context) {

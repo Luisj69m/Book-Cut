@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
-import 'services_client_screen.dart';
+import 'services_client_screen.dart'; // Importa esto si no lo tenías
 
 class CalendarClientScreen extends StatefulWidget {
-  const CalendarClientScreen({super.key});
+  // AÑADIMOS ESTAS DOS VARIABLES
+  final int barberiaId;
+  final String barberiaNombre;
+
+  // Actualizamos el constructor
+  const CalendarClientScreen({
+    super.key,
+    this.barberiaId = 1, // Le damos un valor por defecto por si acaso
+    this.barberiaNombre = "Barbería",
+  });
 
   @override
   State<CalendarClientScreen> createState() => _CalendarClientScreenState();
@@ -240,7 +249,8 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ServicesClientScreen(fechaReserva: fechaFinal),
+                            builder: (context) => ServicesClientScreen(fechaReserva: fechaFinal,
+                              barberiaId: widget.barberiaId,),
                           ),
                         );
                       },

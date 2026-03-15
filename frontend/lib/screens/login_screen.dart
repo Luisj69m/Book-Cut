@@ -3,9 +3,11 @@ import '../services/api_service.dart';
 import 'forgot_password_screen.dart';
 import 'register_client_screen.dart';
 import 'home_client_screen.dart';
-// Importamos tu servicio de conexión
+import 'barber_home_screen.dart'; // Importamos la pantalla del barbero
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
@@ -44,7 +46,19 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('¡Bienvenido Barbero!', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green),
         );
-        // TODO: Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeBarbero()));
+
+        // --- NAVEGACIÓN AL HOME DEL BARBERO ---
+        // Intentamos sacar el nombre de la base de datos (usuario['nombre']).
+        // Si Iván no lo envía en el login, usamos "Luis Jose" por defecto para que no falle.
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BarberHomeScreen(
+              barberName: usuario['nombre'] ?? "Luis Jose",
+              shopName: "La Rodola BarberShop", // Esto lo dejamos fijo por ahora
+            ),
+          ),
+        );
 
       } else {
         print("¡Es un cliente! ID: ${usuario['idUsuario']}");
@@ -59,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
     } catch (e) {
-      // 4. Si  nos devuelve error (ej. contraseña mal), lo mostramos en rojo
+      // 4. Si nos devuelve error (ej. contraseña mal), lo mostramos en rojo
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceAll('Exception: ', '')),
@@ -96,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Container(
                   width: 150,
                   height: 150,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(color: Colors.black38, blurRadius: 10, offset: Offset(0, 5))
@@ -173,8 +187,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 20),
 
                       // Botón Iniciar Sesión (Barbero)
-                      // Nota: Como el backend de Iván ya detecta si es barbero o cliente
-                      // automáticamente por el email, este botón hace exactamente lo mismo.
                       _buildGlowingButton("Iniciar sesion como Barbero", _procesarLogin),
 
                       const SizedBox(height: 30),
@@ -201,7 +213,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       Center(
                         child: InkWell(
                           onTap: () {
-                            // Añade esta navegación:
                             Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => const RegisterClientScreen()),
@@ -228,7 +239,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Widget del botón. Ahora acepta la ruedita de carga.
+  // Widget del botón.
   Widget _buildGlowingButton(String text, VoidCallback onPressed) {
     return Container(
       width: double.infinity,
@@ -252,7 +263,6 @@ class _LoginScreenState extends State<LoginScreen> {
             borderRadius: BorderRadius.circular(25),
           ),
         ),
-        // Si está cargando, desactivamos el botón poniéndolo a null
         onPressed: _isLoading ? null : onPressed,
         child: _isLoading
             ? const SizedBox(
