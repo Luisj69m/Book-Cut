@@ -22,4 +22,9 @@ public class UsuarioController {
                 credenciales.getContrasenaUsuario()
         );
     }
+
+    @PostMapping("/registrar")
+    public Usuario registrar(@RequestBody Usuario nuevoUsuario) {
+        return usuarioService.registrarNuevoUsuario(nuevoUsuario);
+    }
 }

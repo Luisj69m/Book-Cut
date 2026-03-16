@@ -10,6 +10,7 @@ import java.util.List;
 @RequestMapping("/api/barberos")
 public class BarberoController {
     private final BarberoRepository repositorioDeBarberos;
+
     public BarberoController(BarberoRepository repositorioDeBarberos) {
         this.repositorioDeBarberos = repositorioDeBarberos;
     }
