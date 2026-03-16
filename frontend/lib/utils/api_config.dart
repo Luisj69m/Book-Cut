@@ -1,5 +1,5 @@
 class ApiConfig {
-  // ⚠️ EL MARTES EN CLASE, SI CAMBIA EL ROUTER, SOLO TIENES QUE CAMBIAR ESTA LÍNEA ⚠️
+  //  SI CAMBIA EL ROUTER, SOLO HAY QUE CAMBIAR ESTA LÍNEA
   static const String baseUrl = "https://interracial-tamara-archaeologically.ngrok-free.dev/api";
 
   // Endpoints centralizados
@@ -12,4 +12,8 @@ class ApiConfig {
   // Como estos llevan un ID dinámico al final, los hacemos como funciones cortitas
   static String misCitas(int idUsuario) => "$baseUrl/citas/historial/$idUsuario";
   static String cancelarCita(int idCita) => "$baseUrl/citas/cancelar/$idCita";
+
+
+  // NUEVA RUTA
+  static String cambiarEstadoCita(int idCita) => "$baseUrl/citas/$idCita/estado";
 }

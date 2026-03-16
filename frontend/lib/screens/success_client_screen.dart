@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart'; // Importamos el login para volver al inicio
+import 'login_screen.dart';
 
 class SuccessClientScreen extends StatelessWidget {
   const SuccessClientScreen({super.key});
@@ -10,16 +10,16 @@ class SuccessClientScreen extends StatelessWidget {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Capa del fondo: La imagen con un filtro oscuro
+
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                // ¡Asegúrate de tener esta imagen en tu carpeta assets!
+                //
                 image: AssetImage('assets/bg_registro.png'),
                 fit: BoxFit.cover,
               ),
             ),
-            // Esto le pone una capa negra semitransparente por encima a la foto
+
             child: Container(
               color: Colors.black.withOpacity(0.6),
             ),

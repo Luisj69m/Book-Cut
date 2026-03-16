@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 import 'sucess_barber_screen.dart';
 
 class RegisterBarberScreen extends StatefulWidget {
@@ -22,13 +23,36 @@ class _RegisterBarberScreenState extends State<RegisterBarberScreen> {
     String password = _passwordController.text.trim();
     String confirmPassword = _confirmPasswordController.text.trim();
 
+    // ==========================================
+    // 1. VALIDACIONES DE SEGURIDAD
+    // ==========================================
+
+    // Comprobamos que no estén vacíos
     if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, rellena todos los campos')),
+        const SnackBar(content: Text('Por favor, rellena todos los campos'), backgroundColor: Colors.orange),
       );
       return;
     }
 
+    // Comprobamos el formato del correo (ej: info@example.com)
+    final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegExp.hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Introduce un email válido (ej: info@ejemplo.com)'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    // Comprobamos la longitud mínima de la contraseña
+    if (password.length < 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('La contraseña debe tener al menos 4 caracteres'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    // Comprobamos que las contraseñas coinciden
     if (password != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Las contraseñas no coinciden', style: TextStyle(color: Colors.white)), backgroundColor: Colors.redAccent),
@@ -36,27 +60,35 @@ class _RegisterBarberScreenState extends State<RegisterBarberScreen> {
       return;
     }
 
+    // Comprobamos los términos y condiciones
     if (!_aceptaTerminos) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes aceptar los términos y condiciones')),
+        const SnackBar(content: Text('Debes aceptar los términos y condiciones'), backgroundColor: Colors.orange),
       );
       return;
     }
+    // ==========================================
 
     setState(() { _isLoading = true; });
 
     try {
-      // TODO: Aquí llamaremos a ApiService().registrarUsuario(email, password, "BARBERO")
       print("Registrando Barbero... Email: $email");
 
-      await Future.delayed(const Duration(seconds: 2));
+      // Llamamos de verdad al backend de Iván rellenando los huecos vacíos
+      await ApiService().registrarUsuario(
+          "Barbero", // Nombre por defecto
+          "",        // Apellidos vacíos
+          email,     // El email validado
+          password,  // La contraseña validada
+          "",        // Teléfono vacío
+          "BARBERO"  // El rol asignado a esta pantalla
+      );
 
       if (mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const SuccessBarberScreen()),
         );
-
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -219,7 +251,7 @@ class _RegisterBarberScreenState extends State<RegisterBarberScreen> {
   Widget _buildGlowingButton(String text, VoidCallback onPressed) {
     return Container(
       width: double.infinity,
-      height: 50, // Volvemos a la altura normal de 50 porque solo hay un botón
+      height: 50,
       decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(25),
           boxShadow: [

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+// IMPORTANTE: Asegúrate de que esta ruta apunta a tu archivo de Login real
+import 'login_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -103,6 +105,26 @@ class SettingsScreen extends StatelessWidget {
                                 // TODO: Lógica para abrir URL
                               }
                           ),
+
+                          const SizedBox(height: 15),
+                          Divider(color: Colors.grey.shade300, thickness: 1),
+                          const SizedBox(height: 15),
+
+                          // --- BOTÓN CERRAR SESIÓN ---
+                          _buildOptionItem(
+                              title: "Cerrar sesión",
+                              subtitle: "Salir de tu cuenta actual",
+                              titleColor: Colors.redAccent.shade700, // Lo ponemos en rojo para destacar
+                              onTap: () {
+                                // Navigator.pushAndRemoveUntil borra el historial de navegación
+                                // para que no puedan darle "atrás" y volver a entrar sin loguearse.
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                      (route) => false, // Esto es lo que destruye las pantallas anteriores
+                                );
+                              }
+                          ),
                         ],
                       ),
                     ),
@@ -116,7 +138,7 @@ class SettingsScreen extends StatelessWidget {
                 child: Text(
                   "DARKMATTER",
                   style: TextStyle(
-                      color: Colors.black54, // Color oscuro como en tu captura
+                      color: Colors.black54,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.5
@@ -130,8 +152,9 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  // Widget para construir cada texto de forma limpia
-  Widget _buildOptionItem({required String title, String? subtitle, required VoidCallback onTap}) {
+  // Widget para construir cada texto de forma limpia.
+  // Ahora acepta 'titleColor' por si queremos cambiar el color del título.
+  Widget _buildOptionItem({required String title, String? subtitle, Color? titleColor, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       child: SizedBox(
@@ -139,7 +162,7 @@ class SettingsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontSize: 14, color: Colors.black87)),
+            Text(title, style: TextStyle(fontSize: 14, color: titleColor ?? Colors.black87, fontWeight: titleColor != null ? FontWeight.bold : FontWeight.normal)),
             if (subtitle != null) ...[
               const SizedBox(height: 3),
               Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),

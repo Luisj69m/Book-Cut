@@ -9,7 +9,7 @@ class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
@@ -24,13 +24,35 @@ class _LoginScreenState extends State<LoginScreen> {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
-    // 1. Validamos que no envíen campos vacíos
+    // ==========================================
+    // 1. NUEVAS VALIDACIONES DE SEGURIDAD
+    // ==========================================
+
+    // Comprobamos que no estén vacíos
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, rellena todos los campos')),
+        const SnackBar(content: Text('Por favor, rellena todos los campos'), backgroundColor: Colors.orange),
       );
-      return;
+      return; // Cortamos la ejecución aquí
     }
+
+    // Comprobamos el formato del correo (ej: info@example.com)
+    final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegExp.hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Introduce un email válido (ej: info@ejemplo.com)'), backgroundColor: Colors.orange),
+      );
+      return; // Cortamos la ejecución aquí
+    }
+
+    // Comprobamos la longitud mínima de la contraseña
+    if (password.length < 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('La contraseña debe tener al menos 4 caracteres'), backgroundColor: Colors.orange),
+      );
+      return; // Cortamos la ejecución aquí
+    }
+    // ==========================================
 
     // Encendemos la ruedita de carga
     setState(() { _isLoading = true; });
@@ -47,15 +69,13 @@ class _LoginScreenState extends State<LoginScreen> {
           const SnackBar(content: Text('¡Bienvenido Barbero!', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green),
         );
 
-        // --- NAVEGACIÓN AL HOME DEL BARBERO ---
-        // Intentamos sacar el nombre de la base de datos (usuario['nombre']).
-        // Si Iván no lo envía en el login, usamos "Luis Jose" por defecto para que no falle.
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => BarberHomeScreen(
               barberName: usuario['nombre'] ?? "Luis Jose",
-              shopName: "La Rodola BarberShop", // Esto lo dejamos fijo por ahora
+              shopName: "La Rodola BarberShop",
+              idUsuarioBarbero: usuario['idUsuario'],
             ),
           ),
         );
@@ -68,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeClientScreen()),
+          MaterialPageRoute(builder: (context) =>  HomeClientScreen(idUsuarioCliente: usuario['idUsuario'],)),
         );
       }
 

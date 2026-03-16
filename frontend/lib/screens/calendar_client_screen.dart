@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
-import 'services_client_screen.dart'; // Importa esto si no lo tenías
+import '../services/api_service.dart';
+import 'services_client_screen.dart';
 
 class CalendarClientScreen extends StatefulWidget {
-  // AÑADIMOS ESTAS DOS VARIABLES
   final int barberiaId;
   final String barberiaNombre;
+  final int idCliente; // <--  AÑADIMOS LA VARIABLE PARA EL TESTIGO
 
-  // Actualizamos el constructor
   const CalendarClientScreen({
     super.key,
-    this.barberiaId = 1, // Le damos un valor por defecto por si acaso
+    this.barberiaId = 1,
     this.barberiaNombre = "Barbería",
+    required this.idCliente, // <--  LO HACEMOS OBLIGATORIO
   });
 
   @override
@@ -19,12 +20,11 @@ class CalendarClientScreen extends StatefulWidget {
 
 class _CalendarClientScreenState extends State<CalendarClientScreen> {
   DateTime _selectedDate = DateTime.now();
-  String? _selectedTime; // Guardará la hora elegida (ej: "10:30")
+  String? _selectedTime;
 
   bool _isLoadingHours = false;
-  List<String> _horasOcupadas = []; // Aquí guardaremos las horas que ya están reservadas
+  List<String> _horasOcupadas = [];
 
-  // Generamos todas las horas posibles del día según tu horario
   final List<String> _todasLasHoras = [
     "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
     "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30"
@@ -33,29 +33,35 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargamos las horas disponibles para el día actual nada más abrir la pantalla
     _cargarHorasDisponibles(_selectedDate);
   }
 
-  // Esta función simula la llamada al backend de Iván para ver qué horas están cogidas
   Future<void> _cargarHorasDisponibles(DateTime fecha) async {
     setState(() {
       _isLoadingHours = true;
-      _selectedTime = null; // Si cambia de día, borramos la hora que había seleccionado
+      _selectedTime = null;
     });
 
-    // TODO: En el futuro, aquí llamaremos a ApiService().getHorasOcupadas(fecha)
-    await Future.delayed(const Duration(milliseconds: 500)); // Simulamos carga de red
+    try {
+      // 1. Formateamos la fecha para Java (ejemplo: "2026-03-30")
+      String mes = fecha.month.toString().padLeft(2, '0');
+      String dia = fecha.day.toString().padLeft(2, '0');
+      String fechaFormateada = "${fecha.year}-$mes-$dia";
 
-    setState(() {
-      // Para la demo, simulamos que los días pares tienen unas horas ocupadas y los impares otras
-      if (fecha.day % 2 == 0) {
-        _horasOcupadas = ["09:00", "10:30", "12:00", "17:30", "19:00"];
-      } else {
-        _horasOcupadas = ["09:30", "11:00", "13:30", "16:00", "18:30", "19:30"];
-      }
-      _isLoadingHours = false;
-    });
+      // 2. Llamamos a la base de datos real a través de ApiService
+      List<String> horasOcupadasBackend = await ApiService().getHorasOcupadas(widget.barberiaId, fechaFormateada);
+
+      setState(() {
+        _horasOcupadas = horasOcupadasBackend; // Guardamos las horas reales
+        _isLoadingHours = false;
+      });
+    } catch (e) {
+      print("Error al cargar las horas: $e");
+      setState(() {
+        _horasOcupadas = []; // Si falla la red, mostramos todo libre por precaución
+        _isLoadingHours = false;
+      });
+    }
   }
 
   @override
@@ -63,7 +69,7 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
     return Scaffold(
       body: Container(
         width: double.infinity,
-        height: double.infinity, // Aseguramos que ocupe todo
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: RadialGradient(
             center: Alignment(0.0, -0.8),
@@ -98,12 +104,12 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                       ),
                     ),
                     Container(
-                      width: 60, // Un poco más pequeño para dar espacio a las horas
+                      width: 60,
                       height: 60,
                       decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(color: Colors.black38, blurRadius: 10, offset: const Offset(0, 5))
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black38, blurRadius: 10, offset: Offset(0, 5))
                           ]
                       ),
                       child: ClipOval(
@@ -116,7 +122,6 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
 
               const SizedBox(height: 10),
 
-              // Envolvemos el calendario y las horas en un Scroll por si la pantalla es pequeña
               Expanded(
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
@@ -129,8 +134,8 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                           decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(15),
-                              boxShadow: [
-                                BoxShadow(color: Colors.black26, blurRadius: 10, offset: const Offset(0, 5))
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 5))
                               ]
                           ),
                           child: Theme(
@@ -149,7 +154,6 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                                 setState(() {
                                   _selectedDate = newDate;
                                 });
-                                // Al cambiar de día, volvemos a buscar las horas libres
                                 _cargarHorasDisponibles(newDate);
                               },
                             ),
@@ -168,8 +172,8 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                           decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(15),
-                              boxShadow: [
-                                BoxShadow(color: Colors.black26, blurRadius: 10, offset: const Offset(0, 5))
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 5))
                               ]
                           ),
                           child: Column(
@@ -182,8 +186,8 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                                 const Center(child: CircularProgressIndicator(color: Colors.black))
                               else
                                 Wrap(
-                                  spacing: 10, // Espacio horizontal entre botones
-                                  runSpacing: 10, // Espacio vertical entre botones
+                                  spacing: 10,
+                                  runSpacing: 10,
                                   children: _todasLasHoras.where((hora) => !_horasOcupadas.contains(hora)).map((hora) {
                                     bool isSelected = _selectedTime == hora;
                                     return ChoiceChip(
@@ -208,7 +212,6 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                                   }).toList(),
                                 ),
 
-                              // Si todas las horas de un día estuvieran ocupadas:
                               if (!_isLoadingHours && _todasLasHoras.every((h) => _horasOcupadas.contains(h)))
                                 const Text("Lo sentimos, no hay citas disponibles para este día.", style: TextStyle(color: Colors.redAccent)),
                             ],
@@ -222,7 +225,7 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                 ),
               ),
 
-              // --- BOTONES INFERIORES (Atrás y Continuar) ---
+              // --- BOTONES INFERIORES ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 10.0),
                 child: Row(
@@ -235,22 +238,25 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
 
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        // Si no hay hora seleccionada, el botón se ve gris apagado
                         backgroundColor: _selectedTime != null ? Colors.blueAccent.shade700 : Colors.grey,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
                       ),
-                      // Desactivamos el botón si no hay hora elegida
                       onPressed: _selectedTime == null ? null : () {
-                        String fechaFinal = "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year} a las $_selectedTime";
-                        print("Reserva iniciada para: $fechaFinal");
+                        final fechaSola = "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}";
+                        final horaSola = _selectedTime!;
 
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ServicesClientScreen(fechaReserva: fechaFinal,
-                              barberiaId: widget.barberiaId,),
+                            builder: (context) => ServicesClientScreen(
+                              barberiaId: widget.barberiaId,
+                              fecha: fechaSola,
+                              hora: horaSola,
+                              // 3. ¡PASAMOS EL TESTIGO A LA SIGUIENTE PANTALLA!
+                              idCliente: widget.idCliente,
+                            ),
                           ),
                         );
                       },

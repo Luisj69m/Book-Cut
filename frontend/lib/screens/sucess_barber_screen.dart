@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart'; // Importamos el login para volver al inicio
+import 'login_screen.dart';
 
 class SuccessBarberScreen extends StatelessWidget {
   const SuccessBarberScreen({super.key});
@@ -14,7 +14,7 @@ class SuccessBarberScreen extends StatelessWidget {
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                // Puedes usar la misma foto o cambiar el nombre si descargas otra
+
                 image: AssetImage('assets/bg_registro_barbero.png'),
                 fit: BoxFit.cover,
               ),

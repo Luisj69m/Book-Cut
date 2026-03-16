@@ -5,7 +5,8 @@ import 'settings_screen.dart';
 import 'profile_client_screen.dart'; // Importamos la pantalla de perfil
 
 class HomeClientScreen extends StatefulWidget {
-  const HomeClientScreen({super.key});
+  final int idUsuarioCliente;
+  const HomeClientScreen({super.key, required this.idUsuarioCliente});
 
   @override
   State<HomeClientScreen> createState() => _HomeClientScreenState();
@@ -159,12 +160,14 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                             padding: const EdgeInsets.only(top: 0),
                             physics: const BouncingScrollPhysics(),
                             children: [
+                              // BARBERÍA 1: LA RODOLA (Conectada a Sergio ID 6)
                               _buildBarberiaItem(
-                                  1,
+                                  6, // <--- ID PERFIL CAMBIADO A 6 PARA SERGIO
                                   "La Rodola",
                                   "Lunes - Sábado",
                                   "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=500&auto=format&fit=crop&q=60"
                               ),
+                              // BARBERÍA 2: PEINE JR
                               _buildBarberiaItem(
                                   2,
                                   "Peine Jr",
@@ -202,6 +205,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
             builder: (context) => CalendarClientScreen(
               barberiaId: id,
               barberiaNombre: nombre,
+              idCliente: widget.idUsuarioCliente,
             ),
           ),
         );
@@ -265,7 +269,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const AppointmentsScreen()),
+                MaterialPageRoute(builder: (context) =>  AppointmentsScreen(idUsuarioCliente: widget.idUsuarioCliente,)),
               );
             },
           ),
