@@ -30,7 +30,7 @@ public class Cita {
     private Servicio servicioContratado;;
 
     @Column(name = "fecha_hora_cita", nullable = false)
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Europe/Madrid")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss[.SSS]", timezone = "Europe/Madrid")
     private LocalDateTime fechaHoraCita;
 
     @Enumerated(EnumType.STRING)
