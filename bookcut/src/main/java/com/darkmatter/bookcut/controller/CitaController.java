@@ -73,4 +73,16 @@ public class CitaController {
     public void cancelar(@PathVariable Long idCita) {
         servicioDeCitas.cancelarCita(idCita);
     }
+
+    @GetMapping("/barbero/{idBarbero}/fecha/{fecha}")
+    public List<Cita> obtenerCitasPorBarberoYFecha(
+            @PathVariable Long idBarbero,
+            @PathVariable String fecha) {
+
+        // Filtramos todas las citas del barbero y nos quedamos solo con las de ese día
+        return citaRepository.findByBarberoAsignado_IdPerfilBarbero(idBarbero)
+                .stream()
+                .filter(c -> c.getFechaHoraCita().toLocalDate().toString().equals(fecha))
+                .toList();
+    }
 }
