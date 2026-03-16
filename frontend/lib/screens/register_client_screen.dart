@@ -24,44 +24,84 @@ class _RegisterClientScreenState extends State<RegisterClientScreen> {
     String password = _passwordController.text.trim();
     String confirmPassword = _confirmPasswordController.text.trim();
 
-    // 1. Validaciones básicas (sin el nombre)
+    // 1. Validaciones básicas de que no estén vacíos
     if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, rellena todos los campos')),
+        const SnackBar(
+          content: Text('Por favor, rellena todos los campos'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating, // <-- ¡Hace que flote sobre el teclado!
+        ),
       );
       return;
     }
 
+    // ========================================================
+    // 2. VALIDACIÓN DE EMAIL ()
+    // ========================================================
+    final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegExp.hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Introduce un email válido (ej: info@ejemplo.com)'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return; // <-- Choca contra el muro y se detiene
+    }
+
+    // ========================================================
+    // 3. VALIDACIÓN DE CONTRASEÑA MÍNIMA ()
+    // ========================================================
+    if (password.length < 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('La contraseña debe tener al menos 4 caracteres'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return; // <-- Choca contra el muro y se detiene
+    }
+
+    // 4. Coincidencia de contraseñas
     if (password != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Las contraseñas no coinciden', style: TextStyle(color: Colors.white)), backgroundColor: Colors.redAccent),
+        const SnackBar(
+          content: Text('Las contraseñas no coinciden', style: TextStyle(color: Colors.white)),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
 
+    // 5. Términos y condiciones
     if (!_aceptaTerminos) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes aceptar los términos y condiciones')),
+        const SnackBar(
+          content: Text('Debes aceptar los términos y condiciones'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
 
+    // Si ha superado TODAS las barreras, empezamos a registrar...
     setState(() { _isLoading = true; });
 
     try {
-      // TODO: Aquí llamaremos a ApiService().registrarUsuario(email, password, "CLIENTE")
       print("Registrando Cliente... Email: $email");
 
-      // Simulamos la espera del servidor
-      // Llamamos de verdad al backend de Iván
-      // Llamamos de verdad al backend de Iván rellenando los huecos vacíos
       await ApiService().registrarUsuario(
-          "Usuario", // Nombre por defecto (por si Java lo exige)
-          "",        // Apellidos vacíos
-          email,     // El email real del campo de texto
-          password,  // La contraseña real
-          "",        // Teléfono vacío
-          "CLIENTE"  // El rol
+          "Usuario",
+          "",
+          email,
+          password,
+          "",
+          "CLIENTE"
       );
 
       if (mounted) {
@@ -72,7 +112,11 @@ class _RegisterClientScreenState extends State<RegisterClientScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent),
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } finally {
       if (mounted) setState(() { _isLoading = false; });
