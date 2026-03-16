@@ -2,7 +2,8 @@ package com.darkmatter.bookcut.model;
 
 public enum EstadoCita {
     PENDIENTE,
-    CONFIRMADA,
-    COMPLETADA,
-    CANCELADA
+    ACEPTADA, // Haz clic aquí y asegúrate de que no haya un espacio después de la A
+    RECHAZADA,
+    CANCELADA,
+    COMPLETADA
 }

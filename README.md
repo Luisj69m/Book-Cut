@@ -1,42 +1,35 @@
-# Bookcut - Sistema de Reserva para Barberias
+# 💈 BookCut - Gestión Inteligente de Barberías
 
-Aplicacion movil y panel de gestion para la reserva de citas en locales de barberia.
+**BookCut** es una solución integral diseñada para digitalizar la experiencia de reserva en barberías, conectando a clientes y profesionales en tiempo real a través de una arquitectura robusta y escalable.
 
-## Vision General del Proyecto
+## 🚀 Estado del MVP (Funcionalidades Clave)
+Actualmente, el proyecto ha completado su ciclo principal de valor:
+- **Reserva en Tiempo Real:** Los clientes pueden solicitar citas enviando datos precisos al backend.
+- **Gestión de Estados (Core):** Implementación de una lógica de estados (`PENDIENTE`, `ACEPTADA`, `RECHAZADA`, `CANCELADA`) mediante un sistema de actualización directa en base de datos.
+- **Sincronización Multi-plataforma:** Comunicación fluida entre el frontend (Flutter) y el servidor (Spring Boot) mediante protocolos REST.
 
-Este proyecto tiene como objetivo digitalizar el proceso de reserva de citas, permitiendo a los clientes seleccionar servicios, horarios y barberos. Al mismo tiempo, dota a los administradores y profesionales de herramientas para gestionar la disponibilidad, los horarios y las sedes.
+## 🛠️ Stack Tecnológico
+- **Frontend:** Flutter (Dart) - Interfaz de usuario intuitiva y reactiva.
+- **Backend:** Spring Boot (Java 17+) - API REST con persistencia de datos.
+- **Base de Datos:** MySQL - Modelo relacional optimizado para integridad de citas.
+- **ORM:** Hibernate / JPA - Mapeo de entidades con consultas nativas para actualizaciones críticas.
+- **Túnel de Red:** Ngrok - Exposición segura del servidor local para pruebas en dispositivos físicos.
 
-## Tecnologias Utilizadas
+## 📦 Estructura del Proyecto
+- `/backend`: Lógica de servidor, controladores de citas y repositorios.
+- `/frontend`: Aplicación móvil desarrollada en Flutter.
+- `/docs`: Documentación del diseño, esquemas SQL y manuales de usuario.
 
-| Area | Tecnologia |
-| :--- | :--- |
-| Frontend | Flutter |
-| Backend | Java con Spring Boot |
-| Base de Datos | MySQL |
-| Infraestructura | Docker y Flyway |
+## 🔧 Configuración y Despliegue
+### Backend
+1. Importar el proyecto en IntelliJ/Eclipse.
+2. Configurar el archivo `application.properties` con tus credenciales de MySQL.
+3. Ejecutar la clase principal.
+4. Levantar Ngrok: `ngrok http 8080`.
 
-## Guia de Instalacion y Ejecucion Local
+### Frontend
+1. Cambiar la `baseUrl` en el servicio de Flutter por la URL generada por Ngrok.
+2. Ejecutar `flutter run`.
 
-Sigue estos pasos para desplegar el entorno de desarrollo en tu maquina local:
-
-1. Clonar el Repositorio:
-   git clone https://github.com/Luisj69m/Book-Cut.git
-   cd Book-Cut
-
-2. Levantar la Base de Datos (Docker):
-   Asegurate de tener Docker Desktop abierto y ejecuta el siguiente comando en la raiz del proyecto:
-   docker-compose up -d
-
-3. Ejecutar el Backend (Spring Boot):
-   Abre el proyecto en tu editor y ejecuta la clase principal, o utiliza Maven desde la terminal en la carpeta del backend:
-   ./mvnw spring-boot:run
-
-La API REST estara disponible y escuchando peticiones en http://localhost:8080
-
-## Colaboradores
-
-| Nombre | Rol en el Proyecto | GitHub |
-| :--- | :--- | :--- |
-| Daniel Monino Garcia | Desarrollador Frontend | daniimg8 |
-| Luis Jose Marcano Fuentes | Desarrollador Backend | Luisj69m |
-| Ivan Rubio Murillo | Desarrollador Backend / DBA | ivaanrubio47 |
+## 👥 Equipo
+- Iván, Luis y Daniel.
