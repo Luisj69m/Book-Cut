@@ -23,6 +23,8 @@ public class CitaController {
     private CitaRepository citaRepository;
     @Autowired
     private BarberoRepository barberoRepository;
+    @Autowired
+    private CitaService citaService;
 
     // 2. El constructor es el que quita el "rojo" porque conecta la clase
     public CitaController(CitaService servicioDeCitas) {
@@ -49,6 +51,12 @@ public class CitaController {
     @PostMapping("/reservar")
     public Cita reservar(@RequestBody Cita nuevaCita) {
         return servicioDeCitas.crearNuevaCita(nuevaCita);
+    }
+
+    @PostMapping
+    public ResponseEntity<Cita> crearCita(@RequestBody Cita cita) {
+        Cita nuevaCita = citaService.crearNuevaCita(cita);
+        return ResponseEntity.ok(nuevaCita);
     }
 
     @GetMapping("/historial/{idUsuario}")

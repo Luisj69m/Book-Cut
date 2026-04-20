@@ -1,28 +1,52 @@
 package com.darkmatter.bookcut.service;
+
 import com.darkmatter.bookcut.model.Cita;
 import com.darkmatter.bookcut.repository.CitaRepository;
 import org.springframework.stereotype.Service;
-
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
 public class CitaService {
+
     private final CitaRepository repositorioDeCitas;
-    public CitaService(CitaRepository repositorioDeCitas) {
+    private final EmailService emailService;
+
+    // Constructor para la inyección de dependencias
+    public CitaService(CitaRepository repositorioDeCitas, EmailService emailService) {
         this.repositorioDeCitas = repositorioDeCitas;
+        this.emailService = emailService;
     }
+
     public Cita crearNuevaCita(Cita nuevaCita) {
-        Long idBarbero = nuevaCita.getBarberoAsignado().getIdPerfilBarbero();
-        java.time.LocalDateTime fecha = nuevaCita.getFechaHoraCita();
+        // 1. COMPROBACIÓN: Usamos el método que creamos en el Repository para ver si ya existe esa cita
+        boolean ocupado = repositorioDeCitas.existsByBarberoAsignadoAndFechaHoraCita(
+                nuevaCita.getBarberoAsignado(),
+                nuevaCita.getFechaHoraCita()
+        );
 
-        boolean estaOcupado = repositorioDeCitas.existsByBarberoAsignado_IdPerfilBarberoAndFechaHoraCita(idBarbero, fecha);
-
-        if (estaOcupado) {
+        if (ocupado) {
             throw new RuntimeException("Error: El barbero ya tiene una cita a esa hora.");
         }
 
-        // Guardamos y nos aseguramos de que no devuelva nulos extraños
-        return repositorioDeCitas.save(nuevaCita);
+        // 2. GUARDAR
+        Cita citaGuardada = repositorioDeCitas.save(nuevaCita);
+
+        // 3. FORMATEAR FECHA
+        DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd/MM/yyyy 'a las' HH:mm");
+        String fechaFormateada = citaGuardada.getFechaHoraCita().format(formateador);
+
+        // 4. ENVIAR CORREO
+        try {
+            emailService.enviarCorreoConfirmacion(
+                    citaGuardada.getClienteReserva().getCorreoElectronico(),
+                    fechaFormateada
+            );
+        } catch (Exception e) {
+            System.out.println("ERROR al enviar correo: " + e.getMessage());
+        }
+
+        return citaGuardada;
     }
 
     public List<Cita> obtenerHistorialDeCliente(Long idUsuario) {
@@ -30,7 +54,6 @@ public class CitaService {
     }
 
     public boolean estaBarberoDisponible(Long idBarbero, java.time.LocalDateTime fechaHora) {
-        // Aquí Dani consultará si el barbero ya tiene una cita en ese rango exacto
         return !repositorioDeCitas.existsByBarberoAsignado_IdPerfilBarberoAndFechaHoraCita(idBarbero, fechaHora);
     }
 
