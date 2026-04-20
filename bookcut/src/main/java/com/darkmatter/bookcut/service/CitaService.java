@@ -58,10 +58,25 @@ public class CitaService {
     }
 
     public void cancelarCita(Long idCita) {
-        if (!repositorioDeCitas.existsById(idCita)) {
-            throw new RuntimeException("No se puede cancelar: La cita no existe.");
-        }
+        // 1. Buscamos la cita para tener los datos del cliente antes de borrarla
+        Cita cita = repositorioDeCitas.findById(idCita)
+                .orElseThrow(() -> new RuntimeException("No se puede cancelar: La cita no existe."));
+
+        String correoCliente = cita.getClienteReserva().getCorreoElectronico();
+
+        // 2. Borramos la cita de la base de datos
         repositorioDeCitas.deleteById(idCita);
+
+        // 3. Enviamos el correo de confirmación de cancelación
+        try {
+            emailService.enviarCorreo(
+                    correoCliente,
+                    "Cancelación de Cita - Book&Cut",
+                    "Hola, te confirmamos que tu cita ha sido cancelada correctamente. ¡Esperamos verte pronto de nuevo!"
+            );
+        } catch (Exception e) {
+            System.err.println("Error al enviar correo de cancelación: " + e.getMessage());
+        }
     }
 
     public List<Cita> obtenerCitasPorBarbero(Long idBarbero) {
@@ -71,4 +86,34 @@ public class CitaService {
     public List<Cita> obtenerCitasPorUsuario(Long idUsuario) {
         return repositorioDeCitas.findByClienteReserva_IdUsuario(idUsuario);
     }
+
+    public Cita actualizarEstadoCita(Long idCita, String nuevoEstado) {
+        Cita cita = repositorioDeCitas.findById(idCita)
+                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
+
+        cita.setEstadoCita(com.darkmatter.bookcut.model.EstadoCita.valueOf(nuevoEstado.toUpperCase()));
+        Cita citaActualizada = repositorioDeCitas.save(cita);
+
+        String asunto = "";
+        String mensaje = "";
+
+        if ("ACEPTADA".equalsIgnoreCase(nuevoEstado)) {
+            asunto = "¡Cita Confirmada! - Book&Cut";
+            mensaje = "Hola, tu barbero ha aceptado tu cita para la fecha solicitada. ¡Te esperamos!";
+        } else if ("RECHAZADA".equalsIgnoreCase(nuevoEstado)) {
+            asunto = "Cita Rechazada - Book&Cut";
+            mensaje = "Hola, lo sentimos pero el barbero ha rechazado tu solicitud. Por favor, selecciona otro horario.";
+        }
+
+        if (!asunto.isEmpty()) {
+            try {
+                emailService.enviarCorreo(citaActualizada.getClienteReserva().getCorreoElectronico(), asunto, mensaje);
+            } catch (Exception e) {
+                System.err.println("Error al enviar notificación de estado: " + e.getMessage());
+            }
+        }
+
+        return citaActualizada;
+    }
+
 }
