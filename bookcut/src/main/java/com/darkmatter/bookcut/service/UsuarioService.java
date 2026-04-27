@@ -25,6 +25,9 @@ public class UsuarioService {
     private UsuarioRepository usuarioRepository;
 
     @Autowired
+    private org.springframework.mail.javamail.JavaMailSender enviadorDeCorreos;
+
+    @Autowired
     private CitaRepository citaRepository;
 
     public UsuarioService(UsuarioRepository repositorioDeUsuarios) {
@@ -107,5 +110,17 @@ public class UsuarioService {
 
         usuarioEncontrado.setUrlFotoPerfil(urlImagenNube);
         usuarioRepository.save(usuarioEncontrado);
+    }
+
+    public void enviarEmailRecuperacion(String correoDestino) {
+        String codigoRecuperacion = java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+
+        org.springframework.mail.SimpleMailMessage mensaje = new org.springframework.mail.SimpleMailMessage();
+        mensaje.setFrom("soporte@bookcut.com");
+        mensaje.setTo(correoDestino);
+        mensaje.setSubject("Código de recuperación de contraseña");
+        mensaje.setText("Tu código para recuperar la contraseña es: " + codigoRecuperacion);
+
+        enviadorDeCorreos.send(mensaje);
     }
 }

@@ -40,8 +40,7 @@ public class UsuarioController {
 
     @PostMapping("/solicitar-recuperacion")
     public org.springframework.http.ResponseEntity<String> solicitarRecuperacionContrasena(@RequestBody String correoElectronico) {
-        // Aquí llamarías a tu servicio para gestionar el envío del correo
-        // usuarioService.enviarEmailRecuperacion(correoElectronico);
-        return org.springframework.http.ResponseEntity.ok("Si el correo existe, se enviarán instrucciones.");
+        usuarioService.enviarEmailRecuperacion(correoElectronico);
+        return org.springframework.http.ResponseEntity.ok("Si el correo existe, se enviaran instrucciones.");
     }
 }
