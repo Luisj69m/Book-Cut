@@ -3,6 +3,7 @@ package com.darkmatter.bookcut.security;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -20,22 +21,21 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 1. Desactivamos CSRF porque no lo necesitamos para una API REST
-                .csrf(csrf -> csrf.disable())
-
-                // 2. Configuramos el CORS (asegúrate de tener un Bean de CorsConfigurationSource o @CrossOrigin)
-                .cors(Customizer.withDefaults())
-
+                .csrf(csrf -> csrf.disable()) // ESTO ES VITAL
+                .cors(Customizer.withDefaults()) // Permite que Dani se conecte desde fuera
                 .authorizeHttpRequests(auth -> auth
-                        // 3. Liberamos las peticiones OPTIONS (el "preflight" de los navegadores/Flutter)
-                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                        // 1. Primero permitimos el "pre-vuelo" de Flutter
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 4. Tus rutas públicas
+                        // 2. Liberamos las rutas de autenticación (registro, login, pass)
+                        // Asegúrate de que las rutas de Dani empiecen por /auth/
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
 
-                        // 5. El resto requiere estar logueado
+                        // 3. Todo lo demás, bloqueado
                         .anyRequest().authenticated()
-                );
+                )
+                .httpBasic(Customizer.withDefaults()); // O la configuración de JWT que uses
 
         return http.build();
     }
