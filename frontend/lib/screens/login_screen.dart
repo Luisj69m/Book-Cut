@@ -19,50 +19,41 @@ class _LoginScreenState extends State<LoginScreen> {
   // Variable para controlar si estamos esperando respuesta del servidor
   bool _isLoading = false;
 
-  // Esta es la función central que habla con el Backend
   Future<void> _procesarLogin() async {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
-    // ==========================================
-    // 1. NUEVAS VALIDACIONES DE SEGURIDAD
-    // ==========================================
-
-    // Comprobamos que no estén vacíos
+    // Validaciones de seguridad
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor, rellena todos los campos'), backgroundColor: Colors.orange),
       );
-      return; // Cortamos la ejecución aquí
+      return;
     }
 
-    // Comprobamos el formato del correo (ej: info@example.com)
     final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegExp.hasMatch(email)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Introduce un email válido (ej: info@ejemplo.com)'), backgroundColor: Colors.orange),
       );
-      return; // Cortamos la ejecución aquí
+      return;
     }
 
-    // Comprobamos la longitud mínima de la contraseña
     if (password.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('La contraseña debe tener al menos 4 caracteres'), backgroundColor: Colors.orange),
       );
-      return; // Cortamos la ejecución aquí
+      return;
     }
-    // ==========================================
 
-    // Encendemos la ruedita de carga
     setState(() { _isLoading = true; });
 
     try {
-      // 2. Llamamos al backend
+      // Llamamos a nuestro ApiService (que ahora guarda el token en secreto)
       final usuario = await ApiService().login(email, password);
 
-      // 3. Verificamos el rol que nos ha devuelto Java
-      if (usuario['rolUsuario'] == 'BARBERO') {
+      // ¡ATENCIÓN AQUÍ! Iván dice que la variable ahora se llama "rol" a secas
+      if (usuario['rol'] == 'BARBERO') {
         print("¡Es un barbero! ID: ${usuario['idUsuario']}");
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -73,7 +64,8 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => BarberHomeScreen(
-              barberName: usuario['nombre'] ?? "Luis Jose",
+              // Iván quitó el nombre, así que ponemos un texto genérico o su propio correo
+              barberName: usuario['correoElectronico'].split('@')[0], // Truquito para sacar el nombre del email
               shopName: "La Rodola BarberShop",
               idUsuarioBarbero: usuario['idUsuario'],
             ),
@@ -88,12 +80,11 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) =>  HomeClientScreen(idUsuarioCliente: usuario['idUsuario'],)),
+          MaterialPageRoute(builder: (context) =>  HomeClientScreen(idUsuarioCliente: usuario['idUsuario'])),
         );
       }
 
     } catch (e) {
-      // 4. Si nos devuelve error (ej. contraseña mal), lo mostramos en rojo
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceAll('Exception: ', '')),
@@ -101,8 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } finally {
-      // Apagamos la ruedita de carga pase lo que pase
-      setState(() { _isLoading = false; });
+      if (mounted) setState(() { _isLoading = false; });
     }
   }
 
@@ -235,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (context) => const RegisterClientScreen()),
+                              MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
                             );
                           },
                           child: Text(

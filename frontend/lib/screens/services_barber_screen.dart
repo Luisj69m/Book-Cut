@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 class ServicesBarberScreen extends StatefulWidget {
   const ServicesBarberScreen({super.key});
@@ -8,166 +9,214 @@ class ServicesBarberScreen extends StatefulWidget {
 }
 
 class _ServicesBarberScreenState extends State<ServicesBarberScreen> {
-  // Datos de prueba basados en tu prototipo
-  final List<Map<String, dynamic>> _servicios = [
-    {"nombre": "Mechas Color", "precio": "35,00 €", "duracion": "60 min"},
-    {"nombre": "Mechas", "precio": "25,00 €", "duracion": "45 min"},
-    {"nombre": "Pelo blanco", "precio": "50,00 €", "duracion": "90 min"},
-    {"nombre": "Corte Clásico", "precio": "12,00 €", "duracion": "30 min"},
-    {"nombre": "Arreglo de barba", "precio": "8,00 €", "duracion": "15 min"},
-  ];
+  final ApiService _apiService = ApiService();
+  bool _isLoading = true;
+  List<dynamic> _servicios = [];
+
+  final Color bgDarkPurple = const Color(0xFF381483);
+  final Color accentPink = const Color(0xFFE96D71);
+  final Color accentBlue = const Color(0xFF2962FF);
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarServicios();
+  }
+
+  Future<void> _cargarServicios() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await _apiService.getServicios();
+      setState(() {
+        _servicios = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _mostrarSnackBar("Error al cargar servicios: $e", Colors.red);
+    }
+  }
+
+  void _mostrarSnackBar(String mensaje, Color color) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(mensaje), backgroundColor: color, behavior: SnackBarBehavior.floating),
+      );
+    }
+  }
+
+  void _mostrarDialogoFormulario({Map<String, dynamic>? servicioEdit}) {
+    final bool isEdit = servicioEdit != null;
+    final nombreController = TextEditingController(text: isEdit ? servicioEdit['nombreServicio'] : '');
+    final precioController = TextEditingController(text: isEdit ? servicioEdit['precioServicio'].toString() : '');
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(isEdit ? "Editar Servicio" : "Nuevo Servicio", style: const TextStyle(fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nombreController,
+                decoration: const InputDecoration(labelText: "Nombre del servicio", border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 15),
+              TextField(
+                controller: precioController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: "Precio (€)", border: OutlineInputBorder()),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancelar", style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: accentBlue, foregroundColor: Colors.white),
+              onPressed: () async {
+                final nombre = nombreController.text.trim();
+                final precioRaw = precioController.text.replaceAll(',', '.');
+                final precio = double.tryParse(precioRaw);
+
+                if (nombre.isEmpty || precio == null) {
+                  _mostrarSnackBar("Datos inválidos", Colors.orange);
+                  return;
+                }
+
+                Navigator.pop(context);
+                setState(() => _isLoading = true);
+
+                bool exito = isEdit
+                    ? await _apiService.actualizarServicio(servicioEdit['idServicio'], nombre, precio)
+                    : await _apiService.crearServicio(nombre, precio);
+
+                if (exito) {
+                  _mostrarSnackBar(isEdit ? "Actualizado" : "Creado", Colors.green);
+                  _cargarServicios();
+                } else {
+                  _mostrarSnackBar("Error al guardar", Colors.red);
+                  setState(() => _isLoading = false);
+                }
+              },
+              child: Text(isEdit ? "Guardar" : "Crear"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _mostrarDialogoBorrar(int idServicio, String nombre) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text("¿Eliminar?"),
+          content: Text("¿Borrar '$nombre'?"),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("No")),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: accentPink, foregroundColor: Colors.white),
+              onPressed: () async {
+                Navigator.pop(context);
+                setState(() => _isLoading = true);
+                if (await _apiService.eliminarServicio(idServicio)) {
+                  _cargarServicios();
+                } else {
+                  setState(() => _isLoading = false);
+                  _mostrarSnackBar("Error al borrar", Colors.red);
+                }
+              },
+              child: const Text("Eliminar"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Añadimos un botón flotante para "Añadir Servicio"
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // TODO: Lógica para añadir un nuevo servicio
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Añadir servicio en desarrollo")),
-          );
-        },
-        backgroundColor: const Color(0xFF2962FF), // Azul vibrante
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text("Nuevo", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      ),
+      backgroundColor: bgDarkPurple,
       body: Container(
-        width: double.infinity,
-        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: RadialGradient(
             center: Alignment(0.0, -0.8),
             radius: 1.5,
-            colors: [
-              Color(0xFFE96D71), // Rosa/Rojo
-              Color(0xFF381483), // Morado oscuro
-            ],
+            colors: [Color(0xFFE96D71), Color(0xFF381483)],
           ),
         ),
         child: SafeArea(
-          bottom: false,
+          bottom: false, // Lo ponemos en false para que el menú llegue hasta el fondo
           child: Column(
             children: [
-              // --- HEADER CON LOGO Y TÍTULO ---
+              // HEADER
               Padding(
-                padding: const EdgeInsets.only(top: 10.0, left: 20, right: 20, bottom: 20),
-                child: Column(
+                padding: const EdgeInsets.all(20.0),
+                child: Row(
                   children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: IconButton(
-                            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 24),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ),
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              boxShadow: const [
-                                BoxShadow(color: Colors.black38, blurRadius: 10, offset: Offset(0, 5))
-                              ],
-                              border: Border.all(color: Colors.white24, width: 2)
-                          ),
-                          child: ClipOval(
-                            child: Image.asset('assets/logo.png', fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Container(
-                                color: Colors.white,
-                                child: const Icon(Icons.content_cut, color: Color(0xFF381483), size: 40),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                    IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context)
                     ),
-                    const SizedBox(height: 15),
-                    const Text(
-                      "Mis Servicios",
-                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                    ),
+                    const SizedBox(width: 15),
+                    const Text("Gestión de Servicios", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
 
-              // --- CONTENEDOR PRINCIPAL BLANCO ---
+              // CONTENIDO DE LA LISTA
               Expanded(
                 child: Container(
                   width: double.infinity,
                   decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(35),
-                      topRight: Radius.circular(35),
-                    ),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30))
                   ),
-                  child: Column(
-                    children: [
-                      // --- TARJETA DE CABECERA OSCURA ---
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(25, 25, 25, 10),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                          decoration: BoxDecoration(
-                              color: const Color(0xFF2A0D68), // Morado oscuro
-                              borderRadius: BorderRadius.circular(15),
-                              boxShadow: const [
-                                BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 3))
-                              ]
+                  // Importante: ClipRRect para que la lista no muerda los bordes redondeados
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+                    child: _isLoading
+                        ? Center(child: CircularProgressIndicator(color: bgDarkPurple))
+                        : ListView.builder(
+                      padding: const EdgeInsets.only(top: 20, bottom: 80, left: 20, right: 20), // Bottom padding extra para el botón flotante
+                      itemCount: _servicios.length,
+                      itemBuilder: (context, index) {
+                        final serv = _servicios[index];
+                        return Card(
+                          elevation: 2,
+                          margin: const EdgeInsets.only(bottom: 15),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          child: ListTile(
+                            title: Text(serv['nombreServicio'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text("${serv['precioServicio']} €", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(icon: const Icon(Icons.edit, color: Colors.black54), onPressed: () => _mostrarDialogoFormulario(servicioEdit: serv)),
+                                IconButton(icon: Icon(Icons.delete_outline, color: accentPink), onPressed: () => _mostrarDialogoBorrar(serv['idServicio'], serv['nombreServicio'])),
+                              ],
+                            ),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                "Catálogo de servicios activos",
-                                style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w500),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                    color: Colors.white24,
-                                    borderRadius: BorderRadius.circular(10)
-                                ),
-                                child: Text(
-                                  "${_servicios.length}",
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // --- LISTA DE SERVICIOS ---
-                      Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.only(left: 25.0, right: 25.0, top: 10, bottom: 80), // bottom 80 para que el FAB no tape el último
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: _servicios.length,
-                          itemBuilder: (context, index) {
-                            final servicio = _servicios[index];
-                            return _buildServiceCard(
-                              nombre: servicio["nombre"],
-                              precio: servicio["precio"],
-                              duracion: servicio["duracion"],
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
 
-              // --- BARRA INFERIOR ---
-
+              // ==========================================
+              // TU NUEVO BOTTOM NAV BAR
+              // ==========================================
               Container(
-                color: Colors.white,
+                color: Colors.white, // Fondo blanco para empalmar con el contenedor de arriba
                 child: Container(
                   padding: const EdgeInsets.only(bottom: 15.0, top: 10),
                   decoration: const BoxDecoration(
@@ -182,10 +231,18 @@ class _ServicesBarberScreenState extends State<ServicesBarberScreen> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.home_outlined, color: Colors.white, size: 30),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          // Navegar al Home
+                          Navigator.pop(context);
+                        },
                       ),
                       IconButton(
                         icon: const Icon(Icons.calendar_month_outlined, color: Colors.white, size: 30),
+                        onPressed: () {},
+                      ),
+                      IconButton(
+                        // Icono activo porque estamos en Servicios
+                        icon: const Icon(Icons.content_cut, color: Colors.greenAccent, size: 30),
                         onPressed: () {},
                       ),
                       IconButton(
@@ -196,104 +253,25 @@ class _ServicesBarberScreenState extends State<ServicesBarberScreen> {
                   ),
                 ),
               )
+              // ==========================================
             ],
           ),
         ),
       ),
-    );
-  }
+      // ==========================================
+      // BOTÓN FLOTANTE (AJUSTADO HACIA ARRIBA)
+      // ==========================================
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 70.0), // <--- EL TRUCO: Lo empujamos 70 píxeles arriba
+        child: FloatingActionButton(
+          backgroundColor: accentBlue,
 
-  // --- WIDGET PARA CADA TARJETA DE SERVICIO ---
-  Widget _buildServiceCard({
-    required String nombre,
-    required String precio,
-    required String duracion,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: const [
-            BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))
-          ]
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+          child: const Icon(Icons.add, color: Colors.white),
+          onPressed: () => _mostrarDialogoFormulario(),
+        ),
       ),
-      child: Row(
-        children: [
-          // Icono y Texto
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2962FF).withOpacity(0.1), // Azul claro
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.style, size: 16, color: Color(0xFF2962FF)),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                          nombre,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.access_time, size: 14, color: Colors.grey.shade500),
-                    const SizedBox(width: 5),
-                    Text(duracion, style: TextStyle(fontSize: 13, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
-                    const SizedBox(width: 15),
-                    // Etiqueta de precio elegante
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                          color: const Color(0xFF381483).withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0xFF381483).withOpacity(0.2))
-                      ),
-                      child: Text(
-                        precio,
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF381483), fontSize: 13),
-                      ),
-                    )
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Botones de acción (Editar / Borrar)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(Icons.edit_outlined, color: Colors.grey.shade600, size: 20),
-                constraints: const BoxConstraints(),
-                padding: const EdgeInsets.all(8),
-                onPressed: () {}, // TODO: Editar servicio
-              ),
-              IconButton(
-                icon: Icon(Icons.delete_outline, color: Colors.red.shade400, size: 20),
-                constraints: const BoxConstraints(),
-                padding: const EdgeInsets.all(8),
-                onPressed: () {}, // TODO: Borrar servicio
-              ),
-            ],
-          )
-        ],
-      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }

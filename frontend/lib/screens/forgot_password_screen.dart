@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -8,180 +9,241 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  // Controlador para el campo de texto. Usamos '_emailController'
-  // aunque la etiqueta pida "Nombre", porque el hint pide email.
-  final TextEditingController _emailController = TextEditingController();
+  final ApiService _apiService = ApiService();
 
-  void _enviarSolicitudCambio() {
-    String email = _emailController.text.trim();
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, introduce tu email o nombre')),
-      );
+  // Controladores
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _codeController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  bool _isLoading = false;
+  int _currentStep = 1; // Paso 1: Pedir email | Paso 2: Pedir código y nueva clave
+  bool _obscurePassword = true;
+
+  // Lógica Paso 1
+  Future<void> _solicitarCodigo() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      _mostrarSnackBar("Introduce un correo válido", Colors.orange);
       return;
     }
 
-    // TODO: Aquí llamarás al ApiService de Iván cuando tenga este endpoint
-    print("Solicitando cambio de contraseña para: $email");
+    setState(() => _isLoading = true);
 
-    // De momento, simulamos éxito
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Si la cuenta existe, recibirás un email para restablecer la contraseña en: $email'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    // Llamamos al ApiService que creamos antes
+    bool exito = await _apiService.solicitarRecuperacion(email);
 
-    // Opcional: Volver automáticamente al Login después de 3 segundos
-    // Future.delayed(const Duration(seconds: 3), () {
-    //   if (mounted) Navigator.pop(context);
-    // });
+    setState(() => _isLoading = false);
+
+    if (exito) {
+      _mostrarSnackBar("Código enviado. Revisa la bandeja de entrada del correo.", Colors.green);
+      setState(() => _currentStep = 2); // Pasamos al siguiente formulario
+    } else {
+      _mostrarSnackBar("Error al solicitar el código. Verifica el correo.", Colors.red);
+    }
   }
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    super.dispose();
+  // Lógica Paso 2
+  Future<void> _cambiarContrasena() async {
+    final codigo = _codeController.text.trim();
+    final nuevaClave = _passwordController.text.trim();
+
+    if (codigo.length != 6 || nuevaClave.length < 4) {
+      _mostrarSnackBar("Código inválido o contraseña muy corta", Colors.orange);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    bool exito = await _apiService.confirmarRecuperacion(codigo, nuevaClave);
+
+    setState(() => _isLoading = false);
+
+    if (exito) {
+      _mostrarSnackBar("¡Contraseña actualizada con éxito!", Colors.green);
+      Navigator.pop(context); // Volvemos al Login
+    } else {
+      _mostrarSnackBar("Código incorrecto o expirado", Colors.red);
+    }
+  }
+
+  void _mostrarSnackBar(String mensaje, Color color) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(mensaje), backgroundColor: color, behavior: SnackBarBehavior.floating),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false, // Evita que se encoja el fondo al abrir teclado
       body: Container(
         width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
-          // Mismo degradado de fondo que el Login
           gradient: RadialGradient(
-            center: Alignment(0.0, -0.8),
+            center: Alignment(0.0, -0.6),
             radius: 1.5,
-            colors: [
-              Color(0xFFE96D71),
-              Color(0xFF381483),
+            colors: [Color(0xFFE96D71), Color(0xFF381483)],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // HEADER
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 24),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const Expanded(
+                      child: Text("Recuperar Cuenta", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 40), // Balance visual
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+              const Icon(Icons.lock_reset, size: 80, color: Colors.white),
+              const SizedBox(height: 20),
+
+              // CONTENEDOR BLANCO
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(30),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
+                  ),
+                  child: SingleChildScrollView(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 400),
+                      child: _currentStep == 1 ? _buildPaso1() : _buildPaso2(),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
-        child: Column(
-          children: [
-            // Parte superior: Logo centrado
-            Expanded(
-              flex: 4,
-              child: Center(
-                child: Container(
-                  width: 150,
-                  height: 150,
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(color: Colors.black38, blurRadius: 10, offset: const Offset(0, 5))
-                      ]
-                  ),
-                  child: ClipOval(
-                    child: Image.asset('assets/logo.png', fit: BoxFit.cover),
-                  ),
-                ),
-              ),
-            ),
-
-            // Parte inferior: Contenedor blanco con el formulario (image_4.png)
-            Expanded(
-              flex: 6,
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(30),
-                    topRight: Radius.circular(30),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(25.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Flecha de atrás (<-)
-                      Align(
-                        alignment: Alignment.topLeft,
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.black),
-                          onPressed: () {
-                            // Cierra esta pantalla y vuelve al Login
-                            Navigator.pop(context);
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 15),
-
-                      // Label: "Nombre" (Como en image_4.png)
-                      const Text(
-                        "Nombre",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: Colors.black,
-                        ),
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // Caja de texto con Hint: "Coloca tu email Aquí" (Como en image_4.png)
-                      TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: InputDecoration(
-                          hintText: "Coloca tu email Aquí",
-                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: Colors.grey.shade400),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: Colors.grey.shade400),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 30),
-
-                      // Botón: "Cambiar contraseña" con efecto neón azul
-                      Container(
-                        width: double.infinity,
-                        height: 50,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(25),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.blueAccent.withOpacity(0.6), // Brillo azul
-                                blurRadius: 15,
-                                spreadRadius: 2,
-                                offset: const Offset(0, 0),
-                              )
-                            ]
-                        ),
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black, // Fondo negro
-                            foregroundColor: Colors.white, // Texto blanco
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                          ),
-                          onPressed: _enviarSolicitudCambio,
-                          child: const Text("Cambiar contraseña", style: TextStyle(fontSize: 15)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
+    );
+  }
+
+  // INTERFAZ PASO 1: Pedir Correo
+  Widget _buildPaso1() {
+    return Column(
+      key: const ValueKey(1),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("¿Olvidaste tu contraseña?", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF381483))),
+        const SizedBox(height: 10),
+        Text("Introduce tu correo electrónico y te enviaremos un código de 6 dígitos para restablecerla.", style: TextStyle(fontSize: 15, color: Colors.grey.shade600)),
+        const SizedBox(height: 30),
+
+        TextField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: InputDecoration(
+            labelText: "Correo electrónico",
+            prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF381483)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFF381483), width: 2)),
+          ),
+        ),
+        const SizedBox(height: 40),
+
+        SizedBox(
+          width: double.infinity,
+          height: 55,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2962FF), // accentBlue
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            ),
+            onPressed: _isLoading ? null : _solicitarCodigo,
+            child: _isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text("Enviar código", style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        )
+      ],
+    );
+  }
+
+  // INTERFAZ PASO 2: Introducir Código y Nueva Contraseña
+  Widget _buildPaso2() {
+    return Column(
+      key: const ValueKey(2),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Introduce el código", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF381483))),
+        const SizedBox(height: 10),
+        Text("Hemos generado un código para ${_emailController.text}. Revisa la consola o tu bandeja.", style: TextStyle(fontSize: 15, color: Colors.grey.shade600)),
+        const SizedBox(height: 30),
+
+        // Input Código
+        TextField(
+          controller: _codeController,
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
+          decoration: InputDecoration(
+            counterText: "",
+            hintText: "000000",
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFF381483), width: 2)),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Input Nueva Contraseña
+        TextField(
+          controller: _passwordController,
+          obscureText: _obscurePassword,
+          decoration: InputDecoration(
+            labelText: "Nueva contraseña",
+            prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF381483)),
+            suffixIcon: IconButton(
+              icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFF381483), width: 2)),
+          ),
+        ),
+        const SizedBox(height: 40),
+
+        SizedBox(
+          width: double.infinity,
+          height: 55,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE96D71), // accentPink
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            ),
+            onPressed: _isLoading ? null : _cambiarContrasena,
+            child: _isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text("Actualizar contraseña", style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ),
+
+        // Botón para volver atrás por si se equivocaron de correo
+        Center(
+          child: TextButton(
+            onPressed: () => setState(() => _currentStep = 1),
+            child: const Text("Usar otro correo electrónico"),
+          ),
+        )
+      ],
     );
   }
 }
