@@ -31,10 +31,9 @@ public class SecurityConfig {
                     return config;
                 }))
 
-                // 3. Permisos de rutas (Liberamos la imagen para probar)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/perfil/imagen/**").permitAll() // LIBERA LA LECTURA
+                        .requestMatchers("/api/auth/login", "/api/usuarios/registro-cliente").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/usuarios/registro-barbero").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 );
 

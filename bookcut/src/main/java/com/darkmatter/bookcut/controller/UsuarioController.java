@@ -27,4 +27,14 @@ public class UsuarioController {
     public Usuario registrar(@RequestBody Usuario nuevoUsuario) {
         return usuarioService.registrarNuevoUsuario(nuevoUsuario);
     }
+
+    @DeleteMapping("/eliminar/{idUsuario}")
+    public org.springframework.http.ResponseEntity<String> eliminarCuenta(@PathVariable Long idUsuario) {
+        try {
+            usuarioService.eliminarCuentaDeUsuario(idUsuario);
+            return org.springframework.http.ResponseEntity.ok("Cuenta y datos asociados eliminados correctamente");
+        } catch (Exception excepcion) {
+            return org.springframework.http.ResponseEntity.badRequest().body("Error al intentar eliminar la cuenta");
+        }
+    }
 }

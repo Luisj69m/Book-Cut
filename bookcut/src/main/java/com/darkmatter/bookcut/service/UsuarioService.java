@@ -3,6 +3,7 @@ package com.darkmatter.bookcut.service;
 import com.darkmatter.bookcut.DTO.PerfilRequestDTO;
 import com.darkmatter.bookcut.DTO.PerfilResponseDTO;
 import com.darkmatter.bookcut.model.Usuario;
+import com.darkmatter.bookcut.repository.CitaRepository;
 import com.darkmatter.bookcut.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,9 @@ public class UsuarioService {
     private final UsuarioRepository repositorioDeUsuarios;
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private CitaRepository citaRepository;
 
     public UsuarioService(UsuarioRepository repositorioDeUsuarios) {
         this.repositorioDeUsuarios = repositorioDeUsuarios;
@@ -89,5 +93,19 @@ public class UsuarioService {
         usuarioRepository.save(usuario);
 
         return nombreArchivo;
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void eliminarCuentaDeUsuario(Long idUsuario) {
+        citaRepository.deleteByClienteReserva_IdUsuario(idUsuario);
+        repositorioDeUsuarios.deleteById(idUsuario);
+    }
+
+    public void actualizarUrlImagen(String correoElectronico, String urlImagenNube) {
+        com.darkmatter.bookcut.model.Usuario usuarioEncontrado = usuarioRepository.findByCorreoElectronicoAndContrasenaUsuario(correoElectronico, urlImagenNube)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado en la base de datos"));
+
+        usuarioEncontrado.setUrlFotoPerfil(urlImagenNube);
+        usuarioRepository.save(usuarioEncontrado);
     }
 }

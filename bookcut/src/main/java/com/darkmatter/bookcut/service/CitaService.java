@@ -87,25 +87,31 @@ public class CitaService {
         Cita cita = repositorioDeCitas.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
+        if ("FINALIZADA".equalsIgnoreCase(nuevoEstado) || "COMPLETADA".equalsIgnoreCase(nuevoEstado)) {
+            if (java.time.LocalDateTime.now().isBefore(cita.getFechaHoraCita())) {
+                throw new RuntimeException("Error: No se puede finalizar una cita antes de que ocurra.");
+            }
+        }
+
         cita.setEstadoCita(com.darkmatter.bookcut.model.EstadoCita.valueOf(nuevoEstado.toUpperCase()));
         Cita citaActualizada = repositorioDeCitas.save(cita);
 
-        String asunto = "";
-        String mensaje = "";
+        String asuntoCorreo = "";
+        String mensajeCorreo = "";
 
         if ("ACEPTADA".equalsIgnoreCase(nuevoEstado)) {
-            asunto = "¡Cita Confirmada! - Book&Cut";
-            mensaje = "Hola, tu barbero ha aceptado tu cita para la fecha solicitada. ¡Te esperamos!";
+            asuntoCorreo = "Cita Confirmada - Book&Cut";
+            mensajeCorreo = "Hola, tu barbero ha aceptado tu cita.";
         } else if ("RECHAZADA".equalsIgnoreCase(nuevoEstado)) {
-            asunto = "Cita Rechazada - Book&Cut";
-            mensaje = "Hola, lo sentimos pero el barbero ha rechazado tu solicitud. Por favor, selecciona otro horario.";
+            asuntoCorreo = "Cita Rechazada - Book&Cut";
+            mensajeCorreo = "Hola, el barbero ha rechazado tu solicitud.";
         }
 
-        if (!asunto.isEmpty()) {
+        if (!asuntoCorreo.isEmpty()) {
             try {
-                emailService.enviarCorreo(citaActualizada.getClienteReserva().getCorreoElectronico(), asunto, mensaje);
-            } catch (Exception e) {
-                System.err.println("Error al enviar notificación de estado: " + e.getMessage());
+                emailService.enviarCorreo(citaActualizada.getClienteReserva().getCorreoElectronico(), asuntoCorreo, mensajeCorreo);
+            } catch (Exception excepcionCorreo) {
+                System.err.println("Error al enviar correo: " + excepcionCorreo.getMessage());
             }
         }
 

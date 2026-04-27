@@ -3,6 +3,7 @@ package com.darkmatter.bookcut.controller;
 import com.darkmatter.bookcut.DTO.PerfilRequestDTO;
 import com.darkmatter.bookcut.DTO.PerfilResponseDTO;
 import com.darkmatter.bookcut.service.UsuarioService;
+import com.darkmatter.bookcut.service.CloudinaryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,45 +18,30 @@ public class PerfilController {
     @Autowired
     private UsuarioService usuarioService;
 
+    @Autowired
+    private CloudinaryService servicioCloudinary;
+
     @GetMapping
     public ResponseEntity<PerfilResponseDTO> obtenerPerfil() {
-        String correo = SecurityContextHolder.getContext().getAuthentication().getName();
-        return ResponseEntity.ok(usuarioService.obtenerPerfil(correo));
+        String correoElectronico = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(usuarioService.obtenerPerfil(correoElectronico));
     }
 
     @PutMapping
     public ResponseEntity<PerfilResponseDTO> actualizarPerfil(@RequestBody PerfilRequestDTO datosActualizados) {
-        String correo = SecurityContextHolder.getContext().getAuthentication().getName();
-        return ResponseEntity.ok(usuarioService.actualizarPerfil(correo, datosActualizados));
+        String correoElectronico = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(usuarioService.actualizarPerfil(correoElectronico, datosActualizados));
     }
 
     @PostMapping("/imagen")
-    public ResponseEntity<String> subirImagen(@RequestParam("file") MultipartFile archivo) { // <--- Cambiado de "imagen" a "file"
-        String correo = SecurityContextHolder.getContext().getAuthentication().getName();
+    public ResponseEntity<String> subirImagen(@RequestParam("file") MultipartFile archivoImagen) {
+        String correoElectronico = SecurityContextHolder.getContext().getAuthentication().getName();
         try {
-            String rutaImagen = usuarioService.guardarImagenPerfil(correo, archivo);
-            return ResponseEntity.ok("Imagen subida con éxito: " + rutaImagen);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error al subir imagen: " + e.getMessage());
-        }
-    }
-
-    @GetMapping("/imagen/{nombreArchivo:.+}")
-    public ResponseEntity<org.springframework.core.io.Resource> obtenerImagen(@PathVariable String nombreArchivo) {
-        try {
-            // La ruta donde guardas las fotos (asegúrate que coincide con tu lógica de guardado)
-            java.nio.file.Path rutaArchivo = java.nio.file.Paths.get("uploads").resolve(nombreArchivo);
-            org.springframework.core.io.Resource recurso = new org.springframework.core.io.UrlResource(rutaArchivo.toUri());
-
-            if (recurso.exists() || recurso.isReadable()) {
-                return ResponseEntity.ok()
-                        .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, "image/jpeg") // O detecta el tipo dinámicamente
-                        .body(recurso);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            String urlImagenNube = servicioCloudinary.subirImagen(archivoImagen);
+            usuarioService.actualizarUrlImagen(correoElectronico, urlImagenNube);
+            return ResponseEntity.ok(urlImagenNube);
+        } catch (Exception excepcionSubida) {
+            return ResponseEntity.badRequest().body("Error al subir imagen a la nube: " + excepcionSubida.getMessage());
         }
     }
 }
