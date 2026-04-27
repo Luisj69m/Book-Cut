@@ -21,16 +21,29 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                // 1. Permite que el frontend de Dani conecte desde cualquier sitio
                 .cors(Customizer.withDefaults())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 1. IMPORTANTE: API sin estado
+
+                // 2. Desactiva la protección CSRF (obligatorio para APIs REST con JWT)
+                .csrf(csrf -> csrf.disable())
+
+                // 3. Configura la API como sin estado
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/usuarios/registrar", "/api/usuarios/login").permitAll()
+                        // 4. Deja pasar las peticiones de comprobación OPTIONS de Flutter
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // 5. RUTAS REALES: Liberamos exactamente lo que tienes en tu UsuarioController
+                        .requestMatchers("/api/usuarios/registrar").permitAll()
+                        .requestMatchers("/api/usuarios/login").permitAll()
+
+                        // 6. Todo lo demás requiere token
                         .anyRequest().authenticated()
                 );
 
-        // 2. LA PIEZA QUE TE FALTA: Añadir tu filtro antes del de Spring
-        http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+        // 7. Enganchamos tu filtro JWT a la cadena
+        http.addFilterBefore(jwtRequestFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
