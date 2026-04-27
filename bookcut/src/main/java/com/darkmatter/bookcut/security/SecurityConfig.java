@@ -3,6 +3,7 @@ package com.darkmatter.bookcut.security;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -17,28 +18,24 @@ public class SecurityConfig {
     private JwtRequestFilter jwtRequestFilter;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 1. Desactivamos el sensor de movimiento (CSRF)
+                // 1. Desactivamos CSRF porque no lo necesitamos para una API REST
                 .csrf(csrf -> csrf.disable())
 
-                // 2. Mantenemos el CORS para que Dani no tenga problemas desde Flutter
-                .cors(cors -> cors.configurationSource(request -> {
-                    var config = new org.springframework.web.cors.CorsConfiguration();
-                    config.setAllowedOrigins(java.util.List.of("*"));
-                    config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-                    config.setAllowedHeaders(java.util.List.of("*"));
-                    return config;
-                }))
+                // 2. Configuramos el CORS (asegúrate de tener un Bean de CorsConfigurationSource o @CrossOrigin)
+                .cors(Customizer.withDefaults())
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll() // Esto libera login y registro
-                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/usuarios/registro-barbero").hasRole("ADMIN")
+                        // 3. Liberamos las peticiones OPTIONS (el "preflight" de los navegadores/Flutter)
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // 4. Tus rutas públicas
+                        .requestMatchers("/auth/**").permitAll()
+
+                        // 5. El resto requiere estar logueado
                         .anyRequest().authenticated()
                 );
-
-        // 4. El filtro de siempre
-        http.addFilterBefore(jwtRequestFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
