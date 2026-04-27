@@ -34,6 +34,7 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/usuarios/registrar").permitAll()
                         .requestMatchers("/api/usuarios/login").permitAll()
+                        .requestMatchers("/api/usuarios/solicitar-recuperacion").permitAll() // Nueva ruta liberada
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 );
