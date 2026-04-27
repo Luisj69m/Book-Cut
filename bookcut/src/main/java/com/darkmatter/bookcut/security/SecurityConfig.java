@@ -32,7 +32,7 @@ public class SecurityConfig {
                 }))
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login", "/api/usuarios/registro-cliente").permitAll()
+                        .requestMatchers("/auth/**").permitAll() // Esto libera login y registro
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/usuarios/registro-barbero").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 );
