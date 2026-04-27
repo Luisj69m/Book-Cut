@@ -31,14 +31,10 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
-                        // 4. Deja pasar las peticiones de comprobación OPTIONS de Flutter
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // 5. RUTAS REALES: Liberamos exactamente lo que tienes en tu UsuarioController
                         .requestMatchers("/api/usuarios/registrar").permitAll()
                         .requestMatchers("/api/usuarios/login").permitAll()
-
-                        // 6. Todo lo demás requiere token
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 );
 
