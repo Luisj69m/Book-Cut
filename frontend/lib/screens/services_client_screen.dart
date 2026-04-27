@@ -4,16 +4,18 @@ import '../models/cita_request.dart';
 
 class ServicesClientScreen extends StatefulWidget {
   final int barberiaId;
+  final String barberiaNombre; // <-- AÑADIDO PARA MOSTRAR EL NOMBRE
   final String fecha;
   final String hora;
-  final int idCliente; // <-- 1. AÑADIDO EL HUECO PARA RECIBIR EL ID
+  final int idCliente;
 
   const ServicesClientScreen({
     super.key,
     required this.barberiaId,
+    this.barberiaNombre = "La Rodola Barber", // Nombre por defecto si no se pasa
     required this.fecha,
     required this.hora,
-    required this.idCliente, // <-- 2. LO HACEMOS OBLIGATORIO
+    required this.idCliente,
   });
 
   @override
@@ -21,20 +23,44 @@ class ServicesClientScreen extends StatefulWidget {
 }
 
 class _ServicesClientScreenState extends State<ServicesClientScreen> {
-  bool _isLoading = false;
+  bool _isLoading = true;
+  List<dynamic> _servicios = [];
+  final ApiService _apiService = ApiService();
 
-  final List<Map<String, dynamic>> _servicios = [
-    {"id": 1, "nombre": "Corte Clásico", "precio": "12,00 €", "duracion": "30 min"},
-    {"id": 2, "nombre": "Degradado y barba", "precio": "18,00 €", "duracion": "45 min"},
-    {"id": 3, "nombre": "Arreglo de barba", "precio": "8,00 €", "duracion": "15 min"},
-    {"id": 4, "nombre": "Corte a tijera", "precio": "14,00 €", "duracion": "40 min"},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _cargarServicios();
+  }
+
+  // =======================================================
+  // --- LÓGICA INTACTA ---
+  // =======================================================
+  Future<void> _cargarServicios() async {
+    try {
+      final data = await _apiService.getServicios();
+      setState(() {
+        _servicios = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar catálogo: $e'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 
   void _confirmarReserva(int idServicio, String nombreServicio, String precio) async {
     setState(() { _isLoading = true; });
 
     try {
-      // 1. Parseamos la fecha dd/MM/yyyy y la hora HH:mm
       List<String> fechaPartes = widget.fecha.split('/');
       int dia = int.parse(fechaPartes[0]);
       int mes = int.parse(fechaPartes[1]);
@@ -46,16 +72,15 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
 
       DateTime fechaHoraSeleccionada = DateTime(anio, mes, dia, hora, min);
 
-      // 2. Creamos el objeto de petición usando tu ID real
       final reserva = CitaRequest(
-        idCliente: widget.idCliente, // <-- 3. ¡ADIÓS AL 1 MANUAL! USAMOS TU ID
+        idCliente: widget.idCliente,
+        emailCliente: "rubiomurilloivan@gmail.com",
         idBarbero: widget.barberiaId,
         idServicio: idServicio,
         fechaHora: fechaHoraSeleccionada,
       );
 
-      // 3. Enviamos al ApiService
-      await ApiService().reservarCita(reserva);
+      await _apiService.reservarCita(reserva);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -65,7 +90,6 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
-        // Volvemos al inicio tras el éxito
         Navigator.popUntil(context, (route) => route.isFirst);
       }
     } catch (e) {
@@ -109,11 +133,11 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
                 height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF381483),
+                    backgroundColor: const Color(0xFF381483), // Color corporativo
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                   ),
                   onPressed: () {
-                    Navigator.pop(context); // Cierra el BottomSheet
+                    Navigator.pop(context);
                     _confirmarReserva(idServicio, nombreServicio, precio);
                   },
                   child: const Text("Confirmar y Finalizar", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
@@ -126,78 +150,240 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
       },
     );
   }
+  // =======================================================
 
+
+  // =======================================================
+  // --- NUEVA INTERFAZ (Estilo captura de pantalla) ---
+  // =======================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(0.0, -0.8),
-            radius: 1.5,
-            colors: [Color(0xFFE96D71), Color(0xFF381483)],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 24),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const Text("Servicios Disponibles", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                  ],
+      backgroundColor: Colors.white, // Fondo limpio como en la captura
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // --- HEADER CON IMAGEN Y BOTONES FLOTANTES ---
+          SliverAppBar(
+            expandedHeight: 250.0,
+            pinned: true,
+            backgroundColor: const Color(0xFF381483),
+            elevation: 0,
+            // Botón Atrás
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 10.0, top: 8.0, bottom: 8.0),
+              child: Container(
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.black87, size: 22),
+                  onPressed: () => Navigator.pop(context),
                 ),
               ),
-
-              // Lista de servicios
-              Expanded(
+            ),
+            // Botones de la derecha (Compartir y Favorito)
+            actions: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(topLeft: Radius.circular(35), topRight: Radius.circular(35)),
-                  ),
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: Color(0xFF381483)))
-                      : ListView.builder(
-                    padding: const EdgeInsets.all(25),
-                    itemCount: _servicios.length,
-                    itemBuilder: (context, index) {
-                      final servicio = _servicios[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 15),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.grey[200]!),
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          leading: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: const Color(0xFF381483).withOpacity(0.1), shape: BoxShape.circle),
-                            child: const Icon(Icons.content_cut, color: Color(0xFF381483)),
-                          ),
-                          title: Text(servicio["nombre"], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          subtitle: Text("Duración: ${servicio["duracion"]}"),
-                          trailing: Text(servicio["precio"], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green)),
-                          onTap: () => _mostrarDialogoConfirmacion(servicio["id"], servicio["nombre"], servicio["precio"]),
-                        ),
-                      );
-                    },
+                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                  child: IconButton(
+                    icon: const Icon(Icons.ios_share, color: Colors.black87, size: 20),
+                    onPressed: () {}, // Funcionalidad futura
                   ),
                 ),
-              )
+              ),
+              const SizedBox(width: 10),
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, right: 15.0),
+                child: Container(
+                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                  child: IconButton(
+                    icon: const Icon(Icons.favorite_border, color: Colors.black87, size: 20),
+                    onPressed: () {}, // Funcionalidad futura
+                  ),
+                ),
+              ),
             ],
+            // Imagen de fondo
+            flexibleSpace: FlexibleSpaceBar(
+              background: Image.network(
+                "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=500&auto=format&fit=crop&q=60",
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+
+          // --- INFORMACIÓN DE LA BARBERÍA Y TABS ---
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Nombre y dirección
+                  Text(widget.barberiaNombre, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  const SizedBox(height: 5),
+                  Text("C. Mérida Centro, 40, 06800, Mérida", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                  const SizedBox(height: 12),
+
+                  // Estrellas
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.black87, size: 16),
+                      const SizedBox(width: 4),
+                      const Text("5,0", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      Text(" (29 reseñas)", style: TextStyle(color: const Color(0xFFE96D71), fontSize: 14, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text("Barbería Clásica", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                  const SizedBox(height: 25),
+
+                  // Tabs (Simulados para el diseño)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildTab("SERVICIOS", true),
+                      _buildTab("RESEÑAS", false),
+                      _buildTab("PORTAFOLIO", false),
+                      _buildTab("DETALLES", false),
+                    ],
+                  ),
+                  Divider(height: 1, thickness: 1, color: Colors.grey.shade300),
+                  const SizedBox(height: 25),
+
+                  // Título de la lista
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Servicios más populares", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                      Icon(Icons.keyboard_arrow_up, color: Colors.grey.shade500),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          ),
+
+          // --- LISTA DE SERVICIOS (Dinámica desde tu API) ---
+          if (_isLoading)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(40.0),
+                child: Center(child: CircularProgressIndicator(color: Color(0xFF381483))),
+              ),
+            )
+          else if (_servicios.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(40.0),
+                child: Center(child: Text("No hay servicios disponibles en este momento", style: TextStyle(color: Colors.grey.shade600))),
+              ),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                  final servicio = _servicios[index];
+
+                  // Extracción intacta de tus datos
+                  final int id = servicio['idServicio'];
+                  final String nombre = servicio['nombreServicio'] ?? 'Corte';
+                  final double precioNum = servicio['precioServicio'] is num
+                      ? (servicio['precioServicio'] as num).toDouble()
+                      : 0.0;
+                  final String precioStr = "${precioNum.toStringAsFixed(2)} €";
+                  const String duracion = "30 min";
+
+                  return Column(
+                    children: [
+                      _buildServiceItem(id, nombre, precioStr, duracion),
+                      if (index < _servicios.length - 1) // Línea divisoria excepto en el último
+                        Divider(height: 1, thickness: 1, color: Colors.grey.shade100, indent: 20, endIndent: 20),
+                    ],
+                  );
+                },
+                childCount: _servicios.length,
+              ),
+            ),
+
+          // Espacio al final para que no quede pegado abajo
+          const SliverToBoxAdapter(child: SizedBox(height: 50)),
+        ],
+      ),
+    );
+  }
+
+  // --- WIDGET PARA LAS TABS ---
+  Widget _buildTab(String title, bool isActive) {
+    return Column(
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: isActive ? Colors.black87 : Colors.grey.shade500,
           ),
         ),
+        const SizedBox(height: 8),
+        // Subrayado para la tab activa
+        Container(
+          height: 3,
+          width: 40,
+          decoration: BoxDecoration(
+            color: isActive ? Colors.black87 : Colors.transparent,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        )
+      ],
+    );
+  }
+
+  // --- WIDGET PARA CADA ITEM DE LA LISTA ---
+  Widget _buildServiceItem(int id, String nombre, String precio, String duracion) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Nombre del servicio
+          Expanded(
+            child: Text(
+              nombre,
+              style: const TextStyle(fontSize: 15, color: Colors.black87),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+
+          // Precio y Duración
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(precio, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87)),
+              const SizedBox(height: 2),
+              Text(duracion, style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+            ],
+          ),
+
+          const SizedBox(width: 15),
+
+          // Botón Reservar (Con tu color corporativo)
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF381483), // Tu morado en lugar del azul de la foto
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              minimumSize: const Size(0, 36),
+            ),
+            onPressed: () => _mostrarDialogoConfirmacion(id, nombre, precio),
+            child: const Text("Reservar", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          ),
+        ],
       ),
     );
   }

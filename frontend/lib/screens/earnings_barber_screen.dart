@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 class EarningsBarberScreen extends StatefulWidget {
   const EarningsBarberScreen({super.key});
@@ -8,26 +9,45 @@ class EarningsBarberScreen extends StatefulWidget {
 }
 
 class _EarningsBarberScreenState extends State<EarningsBarberScreen> {
-  // Datos de prueba  - En el futuro los traeremos del ApiService
-  final List<Map<String, dynamic>> _ingresosDelDia = [
-    {"servicio": "Mechas", "precio": "25,00 €", "duracion": "45 min", "hora": "10:00"},
-    {"servicio": "Mechas color", "precio": "35,00 €", "duracion": "60 min", "hora": "11:30"},
-    {"servicio": "Pelo blanco", "precio": "50,00 €", "duracion": "90 min", "hora": "13:00"},
-    {"servicio": "Corte Clásico", "precio": "12,00 €", "duracion": "30 min", "hora": "16:00"},
-    {"servicio": "Degradado", "precio": "15,00 €", "duracion": "40 min", "hora": "17:00"},
-    {"servicio": "Mechas", "precio": "25,00 €", "duracion": "45 min", "hora": "18:30"},
-  ];
+  final ApiService _apiService = ApiService();
+
+  bool _isLoading = true;
+  double _totalIngresos = 0.0;
+  List<dynamic> _citasDetalle = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarDatosFacturacion();
+  }
+
+  Future<void> _cargarDatosFacturacion() async {
+    setState(() => _isLoading = true);
+    try {
+      final datos = await _apiService.getResumenFacturacion();
+
+      setState(() {
+        // Obtenemos el total y la lista que nos manda Iván
+        _totalIngresos = (datos['totalIngresos'] ?? 0.0).toDouble();
+        _citasDetalle = datos['citasDetalle'] ?? [];
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar la facturación: $e'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Calculamos el total para ponerlo en el encabezado (opcional, pero queda genial)
-    double total = 0;
-    for (var ingreso in _ingresosDelDia) {
-      // Extraemos solo el número (ej: de "25,00 €" sacamos 25.0)
-      String precioLimpio = ingreso["precio"].replaceAll(" €", "").replaceAll(",", ".");
-      total += double.tryParse(precioLimpio) ?? 0;
-    }
-
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -51,7 +71,6 @@ class _EarningsBarberScreenState extends State<EarningsBarberScreen> {
                 padding: const EdgeInsets.only(top: 10.0, left: 20, right: 20, bottom: 20),
                 child: Column(
                   children: [
-                    // Botón de volver y Logo en el centro
                     Stack(
                       alignment: Alignment.center,
                       children: [
@@ -125,8 +144,10 @@ class _EarningsBarberScreenState extends State<EarningsBarberScreen> {
                                 "Ingresos directos de servicios",
                                 style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
                               ),
-                              Text(
-                                "+ ${total.toStringAsFixed(2).replaceAll('.', ',')} €",
+                              _isLoading
+                                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.greenAccent, strokeWidth: 2))
+                                  : Text(
+                                "+ ${_totalIngresos.toStringAsFixed(2).replaceAll('.', ',')} €",
                                 style: const TextStyle(color: Colors.greenAccent, fontSize: 18, fontWeight: FontWeight.bold),
                               ),
                             ],
@@ -136,19 +157,48 @@ class _EarningsBarberScreenState extends State<EarningsBarberScreen> {
 
                       // --- LISTA DE INGRESOS ---
                       Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10),
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: _ingresosDelDia.length,
-                          itemBuilder: (context, index) {
-                            final ingreso = _ingresosDelDia[index];
-                            return _buildIncomeItemCard(
-                              serviceName: ingreso["servicio"],
-                              price: ingreso["precio"],
-                              duration: ingreso["duracion"],
-                              time: ingreso["hora"],
-                            );
-                          },
+                        child: _isLoading
+                            ? const Center(child: CircularProgressIndicator(color: Color(0xFF381483)))
+                            : _citasDetalle.isEmpty
+                            ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.receipt_long, size: 60, color: Colors.grey.shade300),
+                              const SizedBox(height: 10),
+                              Text("Aún no hay citas cobradas", style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                            ],
+                          ),
+                        )
+                            : RefreshIndicator(
+                          onRefresh: _cargarDatosFacturacion,
+                          color: const Color(0xFF381483),
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10),
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: _citasDetalle.length,
+                            itemBuilder: (context, index) {
+                              final cita = _citasDetalle[index];
+
+                              // Mapeo seguro de los datos que vienen del backend
+                              final String servicioNombre = cita["servicioContratado"]?["nombreServicio"] ?? "Servicio";
+                              final double precioNum = (cita["servicioContratado"]?["precioServicio"] ?? 0.0).toDouble();
+                              final String precioStr = "${precioNum.toStringAsFixed(2).replaceAll('.', ',')} €";
+
+                              // Formateo de fecha y hora
+                              final String fechaHoraRaw = cita["fechaHoraCita"] ?? "2024-01-01T00:00:00";
+                              final String hora = fechaHoraRaw.contains('T')
+                                  ? fechaHoraRaw.split('T')[1].substring(0, 5)
+                                  : "--:--";
+
+                              return _buildIncomeItemCard(
+                                serviceName: servicioNombre,
+                                price: precioStr,
+                                duration: "30 min", // Estático por ahora
+                                time: hora,
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ],
@@ -157,8 +207,6 @@ class _EarningsBarberScreenState extends State<EarningsBarberScreen> {
               ),
 
               // --- BARRA INFERIOR ---
-
-
               Container(
                 color: Colors.white,
                 child: Container(
@@ -175,10 +223,7 @@ class _EarningsBarberScreenState extends State<EarningsBarberScreen> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.home_outlined, color: Colors.white, size: 30),
-                        onPressed: () {
-                          // Navegar al Home
-                          Navigator.pop(context);
-                        },
+                        onPressed: () => Navigator.pop(context),
                       ),
                       IconButton(
                         icon: const Icon(Icons.calendar_month_outlined, color: Colors.white, size: 30),
@@ -215,13 +260,12 @@ class _EarningsBarberScreenState extends State<EarningsBarberScreen> {
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50, // Fondo casi blanco
+        color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.grey.shade200), // Borde sutil
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Row(
         children: [
-          // Columna Izquierda: Información
           Expanded(
             flex: 6,
             child: Column(
@@ -259,16 +303,13 @@ class _EarningsBarberScreenState extends State<EarningsBarberScreen> {
               ],
             ),
           ),
-
           const SizedBox(width: 15),
-
-          // Columna Derecha: Monto (Verde elegante)
           Expanded(
             flex: 4,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
               decoration: BoxDecoration(
-                  color: Colors.green.shade50, // Fondo verde muy sutil
+                  color: Colors.green.shade50,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.green.shade100)
               ),
@@ -279,7 +320,7 @@ class _EarningsBarberScreenState extends State<EarningsBarberScreen> {
                       "+ $price",
                       style: TextStyle(
                           fontSize: 18,
-                          fontWeight: FontWeight.w900, // Letra muy gruesa para el dinero
+                          fontWeight: FontWeight.w900,
                           color: Colors.green.shade800
                       )
                   ),

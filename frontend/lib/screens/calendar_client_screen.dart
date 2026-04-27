@@ -5,13 +5,13 @@ import 'services_client_screen.dart';
 class CalendarClientScreen extends StatefulWidget {
   final int barberiaId;
   final String barberiaNombre;
-  final int idCliente; // <--  AÑADIMOS LA VARIABLE PARA EL TESTIGO
+  final int idCliente;
 
   const CalendarClientScreen({
     super.key,
     this.barberiaId = 1,
     this.barberiaNombre = "Barbería",
-    required this.idCliente, // <--  LO HACEMOS OBLIGATORIO
+    required this.idCliente,
   });
 
   @override
@@ -24,6 +24,8 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
 
   bool _isLoadingHours = false;
   List<String> _horasOcupadas = [];
+
+  final ApiService _apiService = ApiService();
 
   final List<String> _todasLasHoras = [
     "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
@@ -43,22 +45,20 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
     });
 
     try {
-      // 1. Formateamos la fecha para Java (ejemplo: "2026-03-30")
       String mes = fecha.month.toString().padLeft(2, '0');
       String dia = fecha.day.toString().padLeft(2, '0');
       String fechaFormateada = "${fecha.year}-$mes-$dia";
 
-      // 2. Llamamos a la base de datos real a través de ApiService
-      List<String> horasOcupadasBackend = await ApiService().getHorasOcupadas(widget.barberiaId, fechaFormateada);
+      List<String> horasOcupadasBackend = await _apiService.getHorasOcupadas(widget.barberiaId, fechaFormateada);
 
       setState(() {
-        _horasOcupadas = horasOcupadasBackend; // Guardamos las horas reales
+        _horasOcupadas = horasOcupadasBackend;
         _isLoadingHours = false;
       });
     } catch (e) {
       print("Error al cargar las horas: $e");
       setState(() {
-        _horasOcupadas = []; // Si falla la red, mostramos todo libre por precaución
+        _horasOcupadas = [];
         _isLoadingHours = false;
       });
     }
@@ -67,6 +67,7 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Ya no extendemos el body porque no hay barra flotante inferior
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -83,45 +84,29 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // --- HEADER ---
+              // --- HEADER LIMPIO ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.pinkAccent.withOpacity(0.5), width: 2),
-                        ),
-                        child: const CircleAvatar(
-                          backgroundColor: Colors.black87,
-                          radius: 20,
-                          child: Icon(Icons.person, color: Colors.white54, size: 25),
-                        ),
-                      ),
+                child: Center(
+                  child: Container(
+                    width: 65,
+                    height: 65,
+                    decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(color: Colors.black38, blurRadius: 10, offset: Offset(0, 5))
+                        ]
                     ),
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: const [
-                            BoxShadow(color: Colors.black38, blurRadius: 10, offset: Offset(0, 5))
-                          ]
-                      ),
-                      child: ClipOval(
-                        child: Image.asset('assets/logo.png', fit: BoxFit.cover),
-                      ),
+                    child: ClipOval(
+                      child: Image.asset('assets/logo.png', fit: BoxFit.cover),
                     ),
-                  ],
+                  ),
                 ),
               ),
 
               const SizedBox(height: 10),
 
+              // --- CONTENIDO ESCROLABLE ---
               Expanded(
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
@@ -219,29 +204,47 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 30), // Un poco de aire al final del scroll
                     ],
                   ),
                 ),
               ),
 
-              // --- BOTONES INFERIORES ---
+              // --- BOTONES INFERIORES DE ACCIÓN ---
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 10.0),
+                // Ajustamos el padding para que quede bien posicionado al final de la pantalla
+                padding: const EdgeInsets.only(left: 25.0, right: 25.0, top: 15.0, bottom: 30.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
-                      onPressed: () => Navigator.pop(context),
+                    // --- BOTÓN ATRÁS (Blanco brillante para destacar sobre morado) ---
+                    Container(
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            )
+                          ]
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF381483), size: 28), // Flecha morada
+                        onPressed: () => Navigator.pop(context),
+                      ),
                     ),
 
+                    // --- BOTÓN CONTINUAR (Coral brillante cuando activo) ---
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _selectedTime != null ? Colors.blueAccent.shade700 : Colors.grey,
+
+                        backgroundColor: _selectedTime != null ? const Color(0xFF381483) : Colors.white.withOpacity(0.2),
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
+                        elevation: _selectedTime != null ? 8 : 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 15),
                       ),
                       onPressed: _selectedTime == null ? null : () {
                         final fechaSola = "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}";
@@ -254,48 +257,34 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                               barberiaId: widget.barberiaId,
                               fecha: fechaSola,
                               hora: horaSola,
-                              // 3. ¡PASAMOS EL TESTIGO A LA SIGUIENTE PANTALLA!
                               idCliente: widget.idCliente,
                             ),
                           ),
                         );
                       },
-                      child: const Text("Continuar", style: TextStyle(fontSize: 16)),
+                      child: Row(
+                        children: [
+                          Text(
+                              "Continuar",
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                // El texto se atenúa si el botón está desactivado
+                                color: _selectedTime != null ? Colors.white : Colors.white54,
+                              )
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 22,
+                            color: _selectedTime != null ? Colors.white : Colors.white54,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-
-              // --- MENÚ INFERIOR ---
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.home_outlined, color: Colors.white, size: 32),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    IconButton(
-                      icon: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          const Icon(Icons.calendar_today, color: Colors.white, size: 30),
-                          const Positioned(
-                            top: 10,
-                            child: Text("15", style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
-                          )
-                        ],
-                      ),
-                      onPressed: () {},
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.help_outline, color: Colors.white, size: 32),
-                      onPressed: () {},
-                    ),
-                  ],
-                ),
-              )
             ],
           ),
         ),

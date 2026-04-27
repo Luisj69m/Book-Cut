@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+// 👇 Asegúrate de que las rutas a estos archivos sean correctas en tu proyecto
+import 'package:frontend/utils/api_config.dart';
+import 'profile_client_screen.dart';
+import 'settings_screen.dart';
 
 class AppointmentsScreen extends StatefulWidget {
-  final int idUsuarioCliente; // <-- NECESARIO PARA PEDIR LAS CITAS
+  final int idUsuarioCliente;
 
   const AppointmentsScreen({super.key, required this.idUsuarioCliente});
 
@@ -18,11 +22,19 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
   List<dynamic> _citasProximas = [];
   List<dynamic> _citasHistorial = [];
 
+  // Variable para la foto de perfil en la barra de navegación
+  String? _fotoUrlServidor;
+
+  // --- COLORES CORPORATIVOS ---
+  final Color bgDarkPurple = const Color(0xFF381483);
+  final Color accentBlue = const Color(0xFF2962FF);
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _cargarMisCitas();
+    _cargarFotoPerfil(); // Cargamos la foto al entrar
   }
 
   @override
@@ -31,7 +43,22 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
     super.dispose();
   }
 
-  // --- LÓGICA PARA CARGAR Y FILTRAR CITAS ---
+  // --- FUNCIÓN PARA TRAER LA FOTO DE IVÁN ---
+  Future<void> _cargarFotoPerfil() async {
+    try {
+      final datos = await _apiService.getPerfil();
+      final nombreArchivo = datos['urlFotoPerfil'];
+      if (nombreArchivo != null && nombreArchivo.isNotEmpty) {
+        setState(() {
+          _fotoUrlServidor = "${ApiConfig.baseUrl}/perfil/imagen/$nombreArchivo";
+        });
+      }
+    } catch (e) {
+      print("Error cargando la foto en Citas: $e");
+    }
+  }
+
+  // --- LÓGICA DE CITAS ---
   Future<void> _cargarMisCitas() async {
     setState(() => _isLoading = true);
     try {
@@ -43,11 +70,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
       for (var cita in todasLasCitas) {
         String estado = (cita['estadoCita'] ?? "").toString().toUpperCase();
 
-        // Clasificamos según el estado
         if (estado == 'PENDIENTE' || estado == 'ACEPTADA') {
           proximas.add(cita);
         } else {
-          // Completadas, Canceladas, Rechazadas...
           historial.add(cita);
         }
       }
@@ -60,19 +85,110 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
     } catch (e) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error al cargar citas: $e"), backgroundColor: Colors.red)
+          SnackBar(content: Text("Error al cargar citas: $e"), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating)
       );
     }
   }
 
-  // --- PARSEADOR DE FECHAS ---
+  Future<void> _ejecutarCancelacion(int idCita) async {
+    setState(() => _isLoading = true);
+    try {
+      bool exito = await _apiService.cancelarCitaDefinitiva(idCita);
+      if (exito) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Cita cancelada correctamente. Revisa tu correo."), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating)
+          );
+        }
+        await _cargarMisCitas();
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("No se pudo cancelar la cita."), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating)
+          );
+        }
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Error: $e"), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating)
+        );
+      }
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _mostrarDialogoCancelacion(int idCita) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          contentPadding: const EdgeInsets.fromLTRB(25, 25, 25, 15),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Color(0xFFE96D71), size: 50),
+              const SizedBox(height: 15),
+              const Text(
+                "¿Cancelar cita?",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                "¿Estás seguro de que deseas cancelar esta reserva? Se notificará al barbero y recibirás un correo.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
+              ),
+              const SizedBox(height: 25),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: accentBlue,
+                        side: BorderSide(color: accentBlue.withOpacity(0.5)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Mantener", style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE96D71),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _ejecutarCancelacion(idCita);
+                      },
+                      child: const Text("Sí, cancelar", style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Map<String, String> _formatearFecha(String fechaIso) {
     try {
       if (fechaIso.isEmpty) throw Exception();
       DateTime dt = DateTime.parse(fechaIso);
-
       const meses = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-
       return {
         'dia': dt.day.toString().padLeft(2, '0'),
         'mes': meses[dt.month - 1],
@@ -86,7 +202,18 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF381483),
+      backgroundColor: bgDarkPurple,
+      // 👇 Clave para que el contenedor blanco baje hasta el fondo de la pantalla
+      extendBody: true,
+
+      // 👇 La nueva barra de navegación flotante
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(left: 20, right: 20, bottom: 15),
+          child: _buildFloatingNavBar(context, activeIndex: 1), // Índice 1 = Citas
+        ),
+      ),
+
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -121,7 +248,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
                 padding: const EdgeInsets.symmetric(horizontal: 20.0),
                 child: TabBar(
                   controller: _tabController,
-                  indicatorColor: const Color(0xFF2962FF),
+                  indicatorColor: accentBlue,
                   labelColor: Colors.white,
                   unselectedLabelColor: Colors.white54,
                   labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -131,7 +258,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
 
               const SizedBox(height: 10),
 
-              // Contenido
+              // Contenido (Contenedor blanco)
               Expanded(
                 child: Container(
                   width: double.infinity,
@@ -142,7 +269,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
                   child: ClipRRect(
                     borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
                     child: _isLoading
-                        ? const Center(child: CircularProgressIndicator())
+                        ? const Center(child: CircularProgressIndicator(color: Color(0xFF381483)))
                         : TabBarView(
                       controller: _tabController,
                       children: [
@@ -153,8 +280,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
                   ),
                 ),
               ),
-
-              _buildBottomNavBar(context, activeIndex: 1),
+              // Eliminado el bottomNavBar de aquí, ahora está en el Scaffold
             ],
           ),
         ),
@@ -162,35 +288,46 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
     );
   }
 
-  // --- WIDGET GENÉRICO PARA LISTAR CITAS ---
   Widget _buildListaCitas(List<dynamic> citas, {required bool esHistorial}) {
     if (citas.isEmpty) {
-      return const Center(child: Text("No hay citas en esta sección.", style: TextStyle(color: Colors.grey, fontSize: 16)));
+      return const Center(
+          child: Text("No hay citas en esta sección.",
+              style: TextStyle(color: Colors.grey, fontSize: 16)));
     }
-
     return RefreshIndicator(
       onRefresh: _cargarMisCitas,
+      color: const Color(0xFF381483),
       child: ListView.builder(
-        padding: const EdgeInsets.all(25.0),
+        // 👇 Añadido un padding bottom de 110 para que la última tarjeta no quede bajo la barra flotante
+        padding: const EdgeInsets.only(top: 25.0, left: 25.0, right: 25.0, bottom: 110.0),
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: citas.length,
         itemBuilder: (context, index) {
           final cita = citas[index];
+          final int idCita = cita['idCita'] ?? cita['id'] ?? 0;
 
-          // Extracción segura de datos
-          final servicio = cita['servicioContratado']?['nombreServicio'] ?? cita['servicioContratado']?['nombre'] ?? "Corte";
+          final servicio = cita['servicioContratado']?['nombreServicio'] ??
+              cita['servicioContratado']?['nombre'] ??
+              "Corte";
+
+          final precio = cita['servicioContratado']?['precio']?.toString() ?? "---";
+
+          final duracion = cita['servicioContratado']?['duracionMinutos']?.toString() ??
+              cita['servicioContratado']?['duracion']?.toString() ??
+              "---";
+
           final estado = (cita['estadoCita'] ?? "DESCONOCIDO").toString().toUpperCase();
           final fechaMap = _formatearFecha(cita['fechaHoraCita'] ?? "");
 
           if (esHistorial) {
             return _buildHistoryAppointmentCard(
               serviceName: servicio,
-              price: "--- €", // O extraer de la BD
-              duration: "--- min",
+              price: "$precio €",
+              duration: "$duracion min",
               month: fechaMap['mes']!,
               day: fechaMap['dia']!,
               time: fechaMap['hora']!,
-              status: estado, // Muestra "COMPLETADA", "RECHAZADA", etc.
+              status: estado,
             );
           } else {
             return _buildUpcomingAppointmentCard(
@@ -199,7 +336,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
               month: fechaMap['mes']!,
               day: fechaMap['dia']!,
               time: fechaMap['hora']!,
-              status: estado, // Pasamos el estado para que cambie de color
+              status: estado,
+              onCancel: () => _mostrarDialogoCancelacion(idCita),
             );
           }
         },
@@ -207,7 +345,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
     );
   }
 
-  // --- TARJETA PRÓXIMAS (DINÁMICA POR ESTADO) ---
+  // --- TARJETA PRÓXIMAS ---
   Widget _buildUpcomingAppointmentCard({
     required String serviceName,
     required String location,
@@ -215,8 +353,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
     required String day,
     required String time,
     required String status,
+    required VoidCallback onCancel,
   }) {
-    // Lógica visual basada en el estado
     bool isAccepted = status == 'ACEPTADA';
 
     return Container(
@@ -236,7 +374,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.content_cut, size: 18, color: Color(0xFF2962FF)),
+                    Icon(Icons.content_cut, size: 18, color: accentBlue),
                     const SizedBox(width: 5),
                     Expanded(
                       child: Text(serviceName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -246,10 +384,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
                 const SizedBox(height: 5),
                 Text(location, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
                 const SizedBox(height: 12),
-
                 Row(
                   children: [
-                    // --- CHIP DE ESTADO DINÁMICO ---
                     if (isAccepted)
                       Row(
                         children: [
@@ -264,11 +400,10 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
                         decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(8)),
                         child: Text("Pendiente", style: TextStyle(fontSize: 12, color: Colors.orange.shade900, fontWeight: FontWeight.bold)),
                       ),
-
                     const Spacer(),
                     TextButton(
                       style: TextButton.styleFrom(foregroundColor: Colors.red.shade700, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                      onPressed: () {},
+                      onPressed: onCancel,
                       child: const Text("Cancelar", style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ],
@@ -277,7 +412,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
             ),
           ),
           const SizedBox(width: 15),
-          // Caja de fecha
           Expanded(
             flex: 4,
             child: Container(
@@ -286,7 +420,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
               child: Column(
                 children: [
                   Text(day, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF333333), height: 1)),
-                  Text(month, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF2962FF))),
+                  Text(month, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: accentBlue)),
                   const SizedBox(height: 5),
                   Container(height: 1, color: Colors.grey.shade200),
                   const SizedBox(height: 5),
@@ -359,7 +493,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
                 child: Column(
                   children: [
                     Text(day, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF666666), height: 1)),
-                    Text(month, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isCancelled ? Colors.grey : const Color(0xFF2962FF))),
+                    Text(month, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isCancelled ? Colors.grey : accentBlue)),
                     const SizedBox(height: 5),
                     Container(height: 1, color: Colors.grey.shade200),
                     const SizedBox(height: 5),
@@ -374,24 +508,109 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
     );
   }
 
-  // --- BOTTOM NAV BAR ---
-  Widget _buildBottomNavBar(BuildContext context, {required int activeIndex}) {
-    //
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0),
+  // =======================================================
+  // --- NUEVA BARRA FLOTANTE (ESTILO PÍLDORA) ---
+  // =======================================================
+  Widget _buildFloatingNavBar(BuildContext context, {required int activeIndex}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+          color: const Color(0xFF381483),
+          borderRadius: BorderRadius.circular(40),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF381483).withOpacity(0.3),
+              blurRadius: 20,
+              spreadRadius: 2,
+              offset: const Offset(0, 10),
+            )
+          ]
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          IconButton(
-            icon: Icon(Icons.home_outlined, color: activeIndex == 0 ? const Color(0xFF2962FF) : Colors.white, size: 32),
-            onPressed: () {
-              if (activeIndex != 0) Navigator.pop(context);
-            },
-          ),
-          IconButton(icon: Icon(Icons.receipt_long_outlined, color: activeIndex == 1 ? const Color(0xFF2962FF) : Colors.white, size: 30), onPressed: () {}),
-          IconButton(icon: Icon(Icons.calendar_today_outlined, color: activeIndex == 2 ? const Color(0xFF2962FF) : Colors.white, size: 28), onPressed: () {}),
-          IconButton(icon: Icon(Icons.help_outline, color: activeIndex == 3 ? const Color(0xFF2962FF) : Colors.white, size: 32), onPressed: () {}),
+          // 0. HOME -> Usamos Navigator.pop para volver sin crear un bucle de pantallas
+          _buildNavItem(Icons.home_rounded, 0, activeIndex, () {
+            Navigator.pop(context);
+          }),
+
+          // 1. CITAS -> Estamos aquí, no hace nada
+          _buildNavItem(Icons.receipt_long_rounded, 1, activeIndex, () {}),
+
+          // 2. PERFIL (Tu foto dinámica)
+          _buildProfileNavItem(2, activeIndex),
+
+          // 3. AJUSTES
+          _buildNavItem(Icons.settings_rounded, 3, activeIndex, () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const SettingsScreen()),
+            );
+          }),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, int index, int activeIndex, VoidCallback onTap) {
+    final isActive = index == activeIndex;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.white.withOpacity(0.15) : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          icon,
+          color: isActive ? Colors.white : Colors.white70,
+          size: 26,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileNavItem(int index, int activeIndex) {
+    final isActive = index == activeIndex;
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ProfileClientScreen()),
+        ).then((_) {
+          _cargarFotoPerfil();
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.white.withOpacity(0.15) : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isActive ? Colors.white : Colors.white70,
+              width: 1.5,
+            ),
+          ),
+          child: ClipOval(
+            child: _fotoUrlServidor != null
+                ? Image.network(
+              _fotoUrlServidor!,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  Container(color: Colors.grey.shade400, child: const Icon(Icons.person, color: Colors.white, size: 20)),
+            )
+                : Container(color: Colors.grey.shade400, child: const Icon(Icons.person, color: Colors.white, size: 20)),
+          ),
+        ),
       ),
     );
   }

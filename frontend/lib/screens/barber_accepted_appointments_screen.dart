@@ -23,12 +23,13 @@ class _BarberAcceptedAppointmentsScreenState extends State<BarberAcceptedAppoint
     _cargarCitasAceptadas();
   }
 
-  // --- LÓGICA INTACTA ---
+
   Future<void> _cargarCitasAceptadas() async {
     setState(() => _isLoading = true);
     try {
+      // AQUÍ: Usamos tu variable real en lugar del 3 fijo
+      final citas = await ApiService().getCitasPorBarbero(widget.idUsuarioBarbero, "ACEPTADA");
 
-      final citas = await ApiService().getCitasPorBarbero(7, "ACEPTADA");
       setState(() {
         _citasAceptadas = citas;
         _isLoading = false;
@@ -41,19 +42,27 @@ class _BarberAcceptedAppointmentsScreenState extends State<BarberAcceptedAppoint
 
   void _finalizarCita(int id, String cliente) async {
     try {
-      await ApiService().actualizarEstadoCita(id, "COMPLETADA");
+      // AQUÍ: Llamamos a la función especial de facturación
+      await ApiService().finalizarCita(id);
+
       await _cargarCitasAceptadas(); // Refrescar lista
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cita finalizada'), backgroundColor: Colors.green));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cita cobrada con éxito 💰'), backgroundColor: Colors.green)
+      );
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent)
+      );
     }
   }
 
   void _cancelarCita(int id, String cliente) async {
     try {
-      await ApiService().actualizarEstadoCita(id, "CANCELADA");
-      await _cargarCitasAceptadas(); // Refrescar lista
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cita cancelada'), backgroundColor: Colors.orange));
+      // Antes: await ApiService().actualizarEstadoCita(id, "CANCELADA");
+      await ApiService().cancelarCitaDefinitiva(id); // <-- AHORA (Borra la cita y manda email)
+
+      await _cargarCitasAceptadas();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cita cancelada y email enviado'), backgroundColor: Colors.orange));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent));
     }
