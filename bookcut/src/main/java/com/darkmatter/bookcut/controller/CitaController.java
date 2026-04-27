@@ -1,5 +1,6 @@
 package com.darkmatter.bookcut.controller;
 
+import com.darkmatter.bookcut.DTO.CitaResponseDTO;
 import com.darkmatter.bookcut.model.Barbero;
 import com.darkmatter.bookcut.model.Cita;
 import com.darkmatter.bookcut.model.EstadoCita;
@@ -50,8 +51,9 @@ public class CitaController {
     }
 
     @GetMapping("/historial/{idUsuario}")
-    public List<Cita> historial(@PathVariable Long idUsuario) {
-        return citaService.obtenerCitasPorUsuario(idUsuario);
+    public List<CitaResponseDTO> historial(@PathVariable Long idUsuario) {
+        // Asegúrate de usar el nombre exacto del método que pusimos en el Service
+        return citaService.obtenerCitasPorUsuarioDTO(idUsuario);
     }
 
     @GetMapping("/barbero/{idUsuario}/{estado}")
@@ -63,10 +65,10 @@ public class CitaController {
         return citaRepository.findByBarberoAsignadoAndEstadoCita(barbero, estadoEnum);
     }
 
-    @DeleteMapping("/cancelar/{idCita}")
+    @PutMapping("/cancelar/{idCita}")
     public ResponseEntity<String> cancelar(@PathVariable Long idCita) {
         citaService.cancelarCita(idCita);
-        return ResponseEntity.ok("Cita cancelada y cliente notificado.");
+        return ResponseEntity.ok("La cita ha sido marcada como CANCELADA y el cliente ha sido notificado.");
     }
 
     @GetMapping("/barbero/{idBarbero}/fecha/{fecha}")
@@ -75,5 +77,16 @@ public class CitaController {
                 .stream()
                 .filter(c -> c.getFechaHoraCita().toLocalDate().toString().equals(fecha))
                 .toList();
+    }
+
+    @PutMapping("/{idCita}/finalizar")
+    public ResponseEntity<String> finalizarCita(@PathVariable Long idCita) {
+        try {
+            // Reutilizamos la lógica de actualizar estado pero directo a FINALIZADA
+            citaService.actualizarEstadoCita(idCita, "COMPLETADA");
+            return ResponseEntity.ok("Cita completada correctamente. El servicio ha sido cobrado.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error al finalizar la cita: " + e.getMessage());
+        }
     }
 }

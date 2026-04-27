@@ -26,5 +26,15 @@ public class EmailService {
         mensaje.setText("Hola, tu reserva ha sido realizada con éxito para el día: " + fecha);
         enviadorDeCorreos.send(mensaje);
     }
+
+    public void enviarCorreoRecuperacion(String destino, String codigo) {
+        SimpleMailMessage mensaje = new SimpleMailMessage();
+        mensaje.setFrom("soporte@bookcut.com"); // El remitente que quieras
+        mensaje.setTo(destino); // AQUÍ es donde se hace dinámico
+        mensaje.setSubject("Restablecer Contraseña - BookCut");
+        mensaje.setText("Hola,\n\nHas solicitado restablecer tu contraseña. Tu código de verificación es: " + codigo);
+
+        enviadorDeCorreos.send(mensaje);
+    }
 }
 

@@ -29,4 +29,6 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
     void actualizarEstadoDirecto(@Param("idCita") Long idCita, @Param("estado") EstadoCita estado);
 
     List<Cita> findByBarberoAsignadoAndEstadoCita(Barbero barbero, EstadoCita estadoEnum);
+
+    List<Cita> findByEstadoCita(EstadoCita estadoCita);
 }

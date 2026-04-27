@@ -1,6 +1,6 @@
 class ApiConfig {
   //  SI CAMBIA EL ROUTER, SOLO HAY QUE CAMBIAR ESTA LÍNEA
-  static const String baseUrl = "https://interracial-tamara-archaeologically.ngrok-free.dev/api";
+  static const String baseUrl = "http://10.0.2.2:8080/api";
 
   // Endpoints centralizados
   static const String login = "$baseUrl/usuarios/login";

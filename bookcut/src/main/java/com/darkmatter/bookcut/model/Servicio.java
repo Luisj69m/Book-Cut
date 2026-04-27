@@ -23,6 +23,9 @@ public class Servicio {
     @Column(name = "precio_servicio", nullable = false, precision = 10, scale = 2)
     private BigDecimal precioServicio;
 
+    @Column(name = "duracion_minutos")
+    private Integer duracionMinutos;
+
     public Servicio() {
     }
 
@@ -53,5 +56,13 @@ public class Servicio {
 
     public void setPrecioServicio(BigDecimal precioServicio) {
         this.precioServicio = precioServicio;
+    }
+
+    public Integer getDuracionMinutos() {
+        return duracionMinutos;
+    }
+
+    public void setDuracionMinutos(Integer duracionMinutos) {
+        this.duracionMinutos = duracionMinutos;
     }
 }

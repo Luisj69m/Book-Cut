@@ -1,5 +1,7 @@
 package com.darkmatter.bookcut.service;
 
+import com.darkmatter.bookcut.DTO.CitaResponseDTO;
+import com.darkmatter.bookcut.DTO.ServicioDTO;
 import com.darkmatter.bookcut.model.Cita;
 import com.darkmatter.bookcut.repository.CitaRepository;
 import org.springframework.stereotype.Service;
@@ -58,33 +60,27 @@ public class CitaService {
     }
 
     public void cancelarCita(Long idCita) {
-        // 1. Buscamos la cita para tener los datos del cliente antes de borrarla
         Cita cita = repositorioDeCitas.findById(idCita)
-                .orElseThrow(() -> new RuntimeException("No se puede cancelar: La cita no existe."));
+                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
-        String correoCliente = cita.getClienteReserva().getCorreoElectronico();
+        // Cambiamos estado en lugar de borrar
+        cita.setEstadoCita(com.darkmatter.bookcut.model.EstadoCita.CANCELADA);
+        repositorioDeCitas.save(cita);
 
-        // 2. Borramos la cita de la base de datos
-        repositorioDeCitas.deleteById(idCita);
-
-        // 3. Enviamos el correo de confirmación de cancelación
-        try {
-            emailService.enviarCorreo(
-                    correoCliente,
-                    "Cancelación de Cita - Book&Cut",
-                    "Hola, te confirmamos que tu cita ha sido cancelada correctamente. ¡Esperamos verte pronto de nuevo!"
-            );
-        } catch (Exception e) {
-            System.err.println("Error al enviar correo de cancelación: " + e.getMessage());
-        }
+        // Enviar correo (el código que ya tienes)
+        emailService.enviarCorreo(cita.getClienteReserva().getCorreoElectronico(),
+                "Cancelación", "Tu cita ahora figura como CANCELADA.");
     }
 
     public List<Cita> obtenerCitasPorBarbero(Long idBarbero) {
         return repositorioDeCitas.findByBarberoAsignado_IdPerfilBarbero(idBarbero);
     }
 
-    public List<Cita> obtenerCitasPorUsuario(Long idUsuario) {
-        return repositorioDeCitas.findByClienteReserva_IdUsuario(idUsuario);
+    public List<CitaResponseDTO> obtenerCitasPorUsuarioDTO(Long idUsuario) {
+        List<Cita> citas = repositorioDeCitas.findByClienteReserva_IdUsuario(idUsuario);
+        return citas.stream()
+                .map(this::convertirADto)
+                .toList();
     }
 
     public Cita actualizarEstadoCita(Long idCita, String nuevoEstado) {
@@ -114,6 +110,28 @@ public class CitaService {
         }
 
         return citaActualizada;
+    }
+
+    private CitaResponseDTO convertirADto(Cita cita) {
+        CitaResponseDTO dto = new CitaResponseDTO();
+        dto.setIdCita(cita.getIdCita());
+        dto.setFechaHoraCita(cita.getFechaHoraCita());
+        dto.setEstadoCita(cita.getEstadoCita());
+
+        ServicioDTO servicioDto = new ServicioDTO();
+
+        // Nombres corregidos según tu Servicio.java
+        servicioDto.setNombre(cita.getServicioContratado().getNombreServicio());
+
+        // Convertimos BigDecimal a Double para el DTO
+        if (cita.getServicioContratado().getPrecioServicio() != null) {
+            servicioDto.setPrecio(cita.getServicioContratado().getPrecioServicio().doubleValue());
+        }
+
+        servicioDto.setDuracionMinutos(cita.getServicioContratado().getDuracionMinutos());
+
+        dto.setServicioContratado(servicioDto);
+        return dto;
     }
 
 }
