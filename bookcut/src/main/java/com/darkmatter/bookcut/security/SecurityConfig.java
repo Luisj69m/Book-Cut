@@ -21,21 +21,18 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // ESTO ES VITAL
-                .cors(Customizer.withDefaults()) // Permite que Dani se conecte desde fuera
+                .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 1. IMPORTANTE: API sin estado
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Primero permitimos el "pre-vuelo" de Flutter
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // 2. Liberamos las rutas de autenticación (registro, login, pass)
-                        // Asegúrate de que las rutas de Dani empiecen por /auth/
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-
-                        // 3. Todo lo demás, bloqueado
                         .anyRequest().authenticated()
-                )
-                .httpBasic(Customizer.withDefaults()); // O la configuración de JWT que uses
+                );
+
+        // 2. LA PIEZA QUE TE FALTA: Añadir tu filtro antes del de Spring
+        http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

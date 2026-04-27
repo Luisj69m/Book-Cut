@@ -27,6 +27,12 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         final String authorizationHeader = request.getHeader("Authorization");
 
+        // Si no hay token, dejamos pasar la petición directamente al siguiente filtro (permitAll)
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            chain.doFilter(request, response);
+            return; // IMPORTANTE: Salir para no ejecutar el resto de validaciones
+        }
+
         String username = null;
         String jwt = null;
 
