@@ -44,4 +44,15 @@ public class UsuarioController {
         usuarioService.enviarEmailRecuperacion(correoElectronico);
         return org.springframework.http.ResponseEntity.ok("Si el correo existe, se enviaran instrucciones.");
     }
+
+    @PostMapping("/confirmar-recuperacion")
+    public org.springframework.http.ResponseEntity<String> confirmarRecuperacionContrasena(@RequestBody java.util.Map<String, String> peticion) {
+        String codigoDeRecuperacion = peticion.get("codigo");
+        String contrasenaNueva = peticion.get("nuevaContrasena");
+
+        // Aqui llamaras al servicio real mas adelante
+        // usuarioService.actualizarContrasena(codigoDeRecuperacion, contrasenaNueva);
+
+        return org.springframework.http.ResponseEntity.ok("Contrasena actualizada");
+    }
 }

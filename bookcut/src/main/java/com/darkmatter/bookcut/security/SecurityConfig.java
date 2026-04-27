@@ -35,6 +35,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/usuarios/registrar").permitAll()
                         .requestMatchers("/api/usuarios/login").permitAll()
                         .requestMatchers("/api/usuarios/solicitar-recuperacion").permitAll() // Nueva ruta liberada
+                        .requestMatchers("/api/usuarios/confirmar-recuperacion").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 );
