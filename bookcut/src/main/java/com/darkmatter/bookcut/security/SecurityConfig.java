@@ -47,4 +47,16 @@ public class SecurityConfig {
 
         return http.build();
     }
+
+    @Bean
+    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
+        org.springframework.web.cors.CorsConfiguration configuracionCors = new org.springframework.web.cors.CorsConfiguration();
+        configuracionCors.setAllowedOriginPatterns(java.util.List.of("*"));
+        configuracionCors.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuracionCors.setAllowedHeaders(java.util.List.of("*"));
+        configuracionCors.setAllowCredentials(false);
+        org.springframework.web.cors.UrlBasedCorsConfigurationSource fuenteCors = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        fuenteCors.registerCorsConfiguration("/**", configuracionCors);
+        return fuenteCors;
+    }
 }
