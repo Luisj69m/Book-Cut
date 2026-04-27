@@ -25,9 +25,6 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 1. IMPORTANTE: API sin estado
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/usuarios/registrar", "/api/usuarios/login").permitAll()
                         .anyRequest().authenticated()
                 );
