@@ -7,6 +7,7 @@ import com.darkmatter.bookcut.repository.CitaRepository;
 import com.darkmatter.bookcut.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,35 +15,38 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class UsuarioService {
 
-    private final UsuarioRepository repositorioDeUsuarios;
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final CitaRepository citaRepository;
+    private final org.springframework.mail.javamail.JavaMailSender enviadorDeCorreos;
+    private final JdbcTemplate baseDeDatosDirecta;
 
     @Autowired
-    private org.springframework.mail.javamail.JavaMailSender enviadorDeCorreos;
-
-    @Autowired
-    private CitaRepository citaRepository;
-
-    public UsuarioService(UsuarioRepository repositorioDeUsuarios) {
-        this.repositorioDeUsuarios = repositorioDeUsuarios;
+    public UsuarioService(UsuarioRepository usuarioRepository,
+                          CitaRepository citaRepository,
+                          org.springframework.mail.javamail.JavaMailSender enviadorDeCorreos,
+                          JdbcTemplate baseDeDatosDirecta) {
+        this.usuarioRepository = usuarioRepository;
+        this.citaRepository = citaRepository;
+        this.enviadorDeCorreos = enviadorDeCorreos;
+        this.baseDeDatosDirecta = baseDeDatosDirecta;
     }
 
     public Usuario registrarNuevoUsuario(Usuario nuevoUsuario) {
-        if (repositorioDeUsuarios.findByCorreoElectronico(nuevoUsuario.getCorreoElectronico()).isPresent()) {
+        if (usuarioRepository.findByCorreoElectronico(nuevoUsuario.getCorreoElectronico()).isPresent()) {
             throw new RuntimeException("El correo electronico ya esta registrado");
         }
-        return repositorioDeUsuarios.save(nuevoUsuario);
+        return usuarioRepository.save(nuevoUsuario);
     }
 
     public Usuario validarLogin(String correo, String contrasena) {
-        return repositorioDeUsuarios.findByCorreoElectronicoAndContrasenaUsuario(correo, contrasena)
+        return usuarioRepository.findByCorreoElectronicoAndContrasenaUsuario(correo, contrasena)
                 .orElseThrow(() -> new RuntimeException("Credenciales incorrectas"));
     }
 
@@ -50,7 +54,6 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findByCorreoElectronico(correo)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // Usamos el constructor manual que definimos arriba
         return new PerfilResponseDTO(
                 usuario.getNombre(),
                 usuario.getApellidos(),
@@ -75,14 +78,11 @@ public class UsuarioService {
 
     @Transactional
     public String guardarImagenPerfil(String correo, MultipartFile archivo) throws Exception {
-        // 1. DEBUG: Vamos a ver qué correo está llegando del token
         System.out.println("DEBUG - Intentando subir foto para el correo: [" + correo + "]");
 
-        // 2. Buscamos al usuario
         Usuario usuario = usuarioRepository.findByCorreoElectronico(correo)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado (Correo: " + correo + ")"));
 
-        // Definir ruta donde se guardarán las fotos (asegúrate de crear la carpeta 'uploads')
         String nombreArchivo = UUID.randomUUID().toString() + "_" + archivo.getOriginalFilename();
         Path ruta = Paths.get("uploads").resolve(nombreArchivo);
 
@@ -92,20 +92,20 @@ public class UsuarioService {
 
         Files.copy(archivo.getInputStream(), ruta, StandardCopyOption.REPLACE_EXISTING);
 
-        usuario.setUrlFotoPerfil(nombreArchivo); // O la ruta completa
+        usuario.setUrlFotoPerfil(nombreArchivo);
         usuarioRepository.save(usuario);
 
         return nombreArchivo;
     }
 
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public void eliminarCuentaDeUsuario(Long idUsuario) {
         citaRepository.deleteByClienteReserva_IdUsuario(idUsuario);
-        repositorioDeUsuarios.deleteById(idUsuario);
+        usuarioRepository.deleteById(idUsuario);
     }
 
     public void actualizarUrlImagen(String correoElectronico, String urlImagenNube) {
-        com.darkmatter.bookcut.model.Usuario usuarioEncontrado = usuarioRepository.findByCorreoElectronicoAndContrasenaUsuario(correoElectronico, urlImagenNube)
+        Usuario usuarioEncontrado = usuarioRepository.findByCorreoElectronico(correoElectronico)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado en la base de datos"));
 
         usuarioEncontrado.setUrlFotoPerfil(urlImagenNube);
@@ -113,7 +113,15 @@ public class UsuarioService {
     }
 
     public void enviarEmailRecuperacion(String correoDestino) {
-        String codigoRecuperacion = java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        Usuario usuario = usuarioRepository.findByCorreoElectronico(correoDestino)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        String codigoRecuperacion = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+
+        String instruccionSql = "INSERT INTO tokens_restablecer_contrasena (id_usuario, token, fecha_expiracion) " +
+                "VALUES (?, ?, ?) ON CONFLICT (id_usuario) DO UPDATE SET token = EXCLUDED.token, fecha_expiracion = EXCLUDED.fecha_expiracion";
+
+        baseDeDatosDirecta.update(instruccionSql, usuario.getIdUsuario(), codigoRecuperacion, LocalDateTime.now().plusMinutes(15));
 
         org.springframework.mail.SimpleMailMessage mensaje = new org.springframework.mail.SimpleMailMessage();
         mensaje.setFrom("soporte@bookcut.com");
@@ -122,5 +130,27 @@ public class UsuarioService {
         mensaje.setText("Tu código para recuperar la contraseña es: " + codigoRecuperacion);
 
         enviadorDeCorreos.send(mensaje);
+    }
+
+    @Transactional
+    public void actualizarContrasena(String codigo, String nuevaContrasena) {
+        String consultaSql = "SELECT id_usuario FROM tokens_restablecer_contrasena WHERE token = ? AND fecha_expiracion > ?";
+
+        List<Long> listaIdentificadores = baseDeDatosDirecta.queryForList(consultaSql, Long.class, codigo, LocalDateTime.now());
+
+        if (listaIdentificadores.isEmpty()) {
+            throw new RuntimeException("El código es inválido o ha caducado");
+        }
+
+        Long identificadorUsuario = listaIdentificadores.get(0);
+
+        Usuario usuario = usuarioRepository.findById(identificadorUsuario)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        usuario.setContrasenaUsuario(nuevaContrasena);
+        usuarioRepository.save(usuario);
+
+        String borradoSql = "DELETE FROM tokens_restablecer_contrasena WHERE id_usuario = ?";
+        baseDeDatosDirecta.update(borradoSql, identificadorUsuario);
     }
 }

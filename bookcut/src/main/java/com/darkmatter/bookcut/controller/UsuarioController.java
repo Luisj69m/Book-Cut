@@ -1,8 +1,9 @@
 package com.darkmatter.bookcut.controller;
-import com.darkmatter.bookcut.model.DatosLogin;
+
 import com.darkmatter.bookcut.model.Usuario;
 import com.darkmatter.bookcut.service.UsuarioService;
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
 
 @CrossOrigin(origins = "*")
 @RestController
@@ -39,20 +40,23 @@ public class UsuarioController {
     }
 
     @PostMapping("/solicitar-recuperacion")
-    public org.springframework.http.ResponseEntity<String> solicitarRecuperacionContrasena(@RequestBody java.util.Map<String, String> peticion) {
+    public org.springframework.http.ResponseEntity<String> solicitarRecuperacionContrasena(@RequestBody Map<String, String> peticion) {
         String correoElectronico = peticion.get("correoElectronico");
         usuarioService.enviarEmailRecuperacion(correoElectronico);
         return org.springframework.http.ResponseEntity.ok("Si el correo existe, se enviaran instrucciones.");
     }
 
     @PostMapping("/confirmar-recuperacion")
-    public org.springframework.http.ResponseEntity<String> confirmarRecuperacionContrasena(@RequestBody java.util.Map<String, String> peticion) {
-        String codigoDeRecuperacion = peticion.get("codigo");
-        String contrasenaNueva = peticion.get("nuevaContrasena");
+    public org.springframework.http.ResponseEntity<String> confirmarRecuperacionContrasena(@RequestBody Map<String, String> peticion) {
+        try {
+            String codigoDeRecuperacion = peticion.get("codigo");
+            String contrasenaNueva = peticion.get("nuevaContrasena");
 
-        // Aqui llamaras al servicio real mas adelante
-        // usuarioService.actualizarContrasena(codigoDeRecuperacion, contrasenaNueva);
+            usuarioService.actualizarContrasena(codigoDeRecuperacion, contrasenaNueva);
 
-        return org.springframework.http.ResponseEntity.ok("Contrasena actualizada");
+            return org.springframework.http.ResponseEntity.ok("Contrasena actualizada correctamente");
+        } catch (RuntimeException excepcion) {
+            return org.springframework.http.ResponseEntity.badRequest().body(excepcion.getMessage());
+        }
     }
 }
