@@ -153,4 +153,5 @@ public class UsuarioService {
         String borradoSql = "DELETE FROM tokens_restablecer_contrasena WHERE id_usuario = ?";
         baseDeDatosDirecta.update(borradoSql, identificadorUsuario);
     }
+
 }
