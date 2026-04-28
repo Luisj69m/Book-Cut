@@ -10,7 +10,7 @@ import java.security.Key;
 import java.util.Date;
 
 @Component
-public class JwtUtils {
+public class JwtUtil {
 
     // Cambiamos la llave aleatoria por una fija basada en un String secreto
     private final String SEGUNDA_CLAVE_SECRETA = "EstaEsMiClaveSuperSecretaParaElTFGDeBarberia2026";
