@@ -42,6 +42,7 @@ public class UsuarioService {
         if (usuarioRepository.findByCorreoElectronico(nuevoUsuario.getCorreoElectronico()).isPresent()) {
             throw new RuntimeException("El correo electronico ya esta registrado");
         }
+        nuevoUsuario.setRolUsuario(com.darkmatter.bookcut.model.RolUsuario.CLIENTE);
         return usuarioRepository.save(nuevoUsuario);
     }
 
@@ -154,4 +155,19 @@ public class UsuarioService {
         baseDeDatosDirecta.update(borradoSql, identificadorUsuario);
     }
 
+    public Usuario registrarUsuarioDesdeAdmin(Usuario nuevoUsuario) {
+        if (usuarioRepository.findByCorreoElectronico(nuevoUsuario.getCorreoElectronico()).isPresent()) {
+            throw new RuntimeException("El correo electronico ya esta registrado");
+        }
+        return usuarioRepository.save(nuevoUsuario);
+    }
+
+    public Usuario obtenerUsuarioPorCorreo(String correo) {
+        return usuarioRepository.findByCorreoElectronico(correo)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    }
+
+    public List<Usuario> obtenerTodosLosUsuarios() {
+        return usuarioRepository.findAll();
+    }
 }

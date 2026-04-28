@@ -80,4 +80,48 @@ public class UsuarioController {
             return ResponseEntity.badRequest().body(excepcion.getMessage());
         }
     }
+
+    @PostMapping("/admin/registrar-barbero")
+    public org.springframework.http.ResponseEntity<?> registrarBarbero(
+            @RequestHeader("Authorization") String tokenHeader,
+            @RequestBody Usuario nuevoBarbero) {
+        try {
+            String tokenLimpio = tokenHeader.substring(7);
+            String correoAdmin = jwtUtil.obtenerUsernameDeToken(tokenLimpio);
+
+            Usuario usuarioAdministrador = usuarioService.obtenerUsuarioPorCorreo(correoAdmin);
+
+            if (!usuarioAdministrador.getRolUsuario().name().equals("ADMIN")) {
+                return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body("Acceso denegado: Requiere permisos de administrador");
+            }
+
+            nuevoBarbero.setRolUsuario(com.darkmatter.bookcut.model.RolUsuario.BARBERO);
+            Usuario barberoGuardado = usuarioService.registrarUsuarioDesdeAdmin(nuevoBarbero);
+
+            return org.springframework.http.ResponseEntity.ok(barberoGuardado);
+        } catch (Exception excepcion) {
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR).body(excepcion.getMessage());
+        }
+    }
+
+    @GetMapping("/listar")
+    public ResponseEntity<?> listarTodosLosUsuarios(@RequestHeader("Authorization") String tokenHeader) {
+        try {
+            String tokenLimpio = tokenHeader.substring(7);
+            String correoAdmin = jwtUtil.obtenerUsernameDeToken(tokenLimpio);
+            Usuario admin = usuarioService.obtenerUsuarioPorCorreo(correoAdmin);
+
+            if (!admin.getRolUsuario().name().equals("ADMIN")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Acceso denegado");
+            }
+
+            // He visto que no tienes el método obtenerTodos() todavía,
+            // así que usamos el findAll del repository directamente si quieres,
+            // pero lo ideal es que añadas en UsuarioService:
+            // public List<Usuario> listarTodo() { return usuarioRepository.findAll(); }
+            return ResponseEntity.ok(usuarioService.obtenerTodosLosUsuarios());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
 }
