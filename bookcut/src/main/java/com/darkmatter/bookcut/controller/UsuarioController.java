@@ -1,5 +1,6 @@
 package com.darkmatter.bookcut.controller;
 
+import com.darkmatter.bookcut.DTO.PerfilRequestDTO;
 import com.darkmatter.bookcut.model.Usuario;
 import com.darkmatter.bookcut.service.UsuarioService;
 import com.darkmatter.bookcut.security.JwtUtils;
@@ -123,5 +124,15 @@ public class UsuarioController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
+    }
+
+    @GetMapping("/perfil/{correo}")
+    public ResponseEntity<?> obtenerPerfil(@PathVariable String correo) {
+        return ResponseEntity.ok(usuarioService.obtenerPerfil(correo));
+    }
+
+    @PutMapping("/perfil/{correo}")
+    public ResponseEntity<?> actualizarPerfil(@PathVariable String correo, @RequestBody PerfilRequestDTO dto) {
+        return ResponseEntity.ok(usuarioService.actualizarPerfil(correo, dto));
     }
 }
