@@ -73,6 +73,11 @@ public class UsuarioService {
         usuario.setApellidos(dto.getApellidos());
         usuario.setTelefono(dto.getTelefono());
 
+        // Si Dani nos manda una URL de Cloudinary, la guardamos directamente
+        if (dto.getUrlFotoPerfil() != null && !dto.getUrlFotoPerfil().isEmpty()) {
+            usuario.setUrlFotoPerfil(dto.getUrlFotoPerfil());
+        }
+
         usuarioRepository.save(usuario);
         return obtenerPerfil(correo);
     }
