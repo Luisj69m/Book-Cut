@@ -5,16 +5,14 @@ public class PerfilResponseDTO {
     private String apellidos;
     private String correoElectronico;
     private String telefono;
-    private String urlFotoPerfil;
 
     public PerfilResponseDTO() {}
 
-    public PerfilResponseDTO(String nombre, String apellidos, String correoElectronico, String telefono, String urlFotoPerfil) {
+    public PerfilResponseDTO(String nombre, String apellidos, String correoElectronico, String telefono) {
         this.nombre = nombre;
         this.apellidos = apellidos;
         this.correoElectronico = correoElectronico;
         this.telefono = telefono;
-        this.urlFotoPerfil = urlFotoPerfil;
     }
 
     // Getters y Setters
@@ -30,6 +28,4 @@ public class PerfilResponseDTO {
     public String getTelefono() { return telefono; }
     public void setTelefono(String telefono) { this.telefono = telefono; }
 
-    public String getUrlFotoPerfil() { return urlFotoPerfil; }
-    public void setUrlFotoPerfil(String urlFotoPerfil) { this.urlFotoPerfil = urlFotoPerfil; }
-}
+    }

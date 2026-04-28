@@ -9,12 +9,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -59,8 +54,7 @@ public class UsuarioService {
                 usuario.getNombre(),
                 usuario.getApellidos(),
                 usuario.getCorreoElectronico(),
-                usuario.getTelefono(),
-                usuario.getUrlFotoPerfil()
+                usuario.getTelefono()
         );
     }
 
@@ -73,49 +67,14 @@ public class UsuarioService {
         usuario.setApellidos(dto.getApellidos());
         usuario.setTelefono(dto.getTelefono());
 
-        // Si Dani nos manda una URL de Cloudinary, la guardamos directamente
-        if (dto.getUrlFotoPerfil() != null && !dto.getUrlFotoPerfil().isEmpty()) {
-            usuario.setUrlFotoPerfil(dto.getUrlFotoPerfil());
-        }
-
         usuarioRepository.save(usuario);
         return obtenerPerfil(correo);
-    }
-
-    @Transactional
-    public String guardarImagenPerfil(String correo, MultipartFile archivo) throws Exception {
-        System.out.println("DEBUG - Intentando subir foto para el correo: [" + correo + "]");
-
-        Usuario usuario = usuarioRepository.findByCorreoElectronico(correo)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado (Correo: " + correo + ")"));
-
-        String nombreArchivo = UUID.randomUUID().toString() + "_" + archivo.getOriginalFilename();
-        Path ruta = Paths.get("uploads").resolve(nombreArchivo);
-
-        if (!Files.exists(Paths.get("uploads"))) {
-            Files.createDirectories(Paths.get("uploads"));
-        }
-
-        Files.copy(archivo.getInputStream(), ruta, StandardCopyOption.REPLACE_EXISTING);
-
-        usuario.setUrlFotoPerfil(nombreArchivo);
-        usuarioRepository.save(usuario);
-
-        return nombreArchivo;
     }
 
     @Transactional
     public void eliminarCuentaDeUsuario(Long idUsuario) {
         citaRepository.deleteByClienteReserva_IdUsuario(idUsuario);
         usuarioRepository.deleteById(idUsuario);
-    }
-
-    public void actualizarUrlImagen(String correoElectronico, String urlImagenNube) {
-        Usuario usuarioEncontrado = usuarioRepository.findByCorreoElectronico(correoElectronico)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado en la base de datos"));
-
-        usuarioEncontrado.setUrlFotoPerfil(urlImagenNube);
-        usuarioRepository.save(usuarioEncontrado);
     }
 
     public void enviarEmailRecuperacion(String correoDestino) {

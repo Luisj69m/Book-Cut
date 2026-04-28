@@ -4,7 +4,6 @@ public class PerfilRequestDTO {
     private String nombre;
     private String apellidos;
     private String telefono;
-    private String urlFotoPerfil;
 
     public PerfilRequestDTO() {}
 
@@ -16,7 +15,4 @@ public class PerfilRequestDTO {
 
     public String getTelefono() { return telefono; }
     public void setTelefono(String telefono) { this.telefono = telefono; }
-
-    public String getUrlFotoPerfil() { return urlFotoPerfil; }
-    public void setUrlFotoPerfil(String urlFotoPerfil) { this.urlFotoPerfil = urlFotoPerfil; }
 }
