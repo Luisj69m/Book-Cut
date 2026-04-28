@@ -2,7 +2,7 @@ package com.darkmatter.bookcut.controller;
 
 import com.darkmatter.bookcut.model.Usuario;
 import com.darkmatter.bookcut.service.UsuarioService;
-import com.darkmatter.bookcut.security.JwtUtil;
+import com.darkmatter.bookcut.security.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +18,7 @@ public class UsuarioController {
     private final UsuarioService usuarioService;
 
     @Autowired
-    private JwtUtil jwtUtil;
+    private JwtUtils jwtUtil;
 
     public UsuarioController(UsuarioService usuarioService) {
         this.usuarioService = usuarioService;
