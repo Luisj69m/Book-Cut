@@ -49,16 +49,25 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         // 2. Si tenemos username y no hay autenticación previa, validamos
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             if (jwtUtils.validarToken(jwt)) {
-                // Creamos el objeto de autenticación
+
+                // EXTRAEMOS EL ROL DEL TOKEN
+                String rol = jwtUtils.obtenerRolDeToken(jwt);
+
+                // CREAMOS LA AUTORIDAD (IMPORTANTE EL PREFIJO ROLE_)
+                java.util.List<org.springframework.security.core.authority.SimpleGrantedAuthority> authorities =
+                        java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + rol));
+
+
+                // Creamos el objeto de autenticación PASANDO LAS AUTHORITIES
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        username, null, new ArrayList<>());
+                        username, null, authorities); // <--- Ahora ya no va vacía
 
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 // Establecemos la autenticación en el contexto de seguridad
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                System.out.println("DEBUG: Usuario autenticado correctamente: " + username);
+                System.out.println("DEBUG: Usuario " + username + " autenticado con rol: " + rol);
             }
         }
 

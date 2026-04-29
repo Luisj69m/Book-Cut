@@ -49,4 +49,13 @@ public class JwtUtils {
         }
         return false;
     }
+
+    public String obtenerRolDeToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key) // Asegúrate de que 'key' es tu clave secreta de la clase
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("rol", String.class); // Extrae el campo "rol" del JSON del token
+    }
 }
