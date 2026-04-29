@@ -1,13 +1,6 @@
 package com.darkmatter.bookcut.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "tabla_barberias")
@@ -21,8 +14,14 @@ public class Barberia {
     @Column(name = "nombre", nullable = false)
     private String nombre;
 
-    @Column(name = "direccion", nullable = false)
-    private String direccion;
+    @Column(name = "direccion_completa", nullable = false)
+    private String direccionCompleta;
+
+    @Column(name = "zona")
+    private String zona;
+
+    @Column(name = "horario")
+    private String horario;
 
     @Column(name = "descripcion", length = 1000)
     private String descripcion;
@@ -33,12 +32,17 @@ public class Barberia {
 
     public Barberia() {}
 
+    // Getters y Setters
     public Long getIdBarberia() { return idBarberia; }
     public void setIdBarberia(Long idBarberia) { this.idBarberia = idBarberia; }
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
-    public String getDireccion() { return direccion; }
-    public void setDireccion(String direccion) { this.direccion = direccion; }
+    public String getDireccionCompleta() { return direccionCompleta; }
+    public void setDireccionCompleta(String direccionCompleta) { this.direccionCompleta = direccionCompleta; }
+    public String getZona() { return zona; }
+    public void setZona(String zona) { this.zona = zona; }
+    public String getHorario() { return horario; }
+    public void setHorario(String horario) { this.horario = horario; }
     public String getDescripcion() { return descripcion; }
     public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
     public Usuario getBarberoPropietario() { return barberoPropietario; }

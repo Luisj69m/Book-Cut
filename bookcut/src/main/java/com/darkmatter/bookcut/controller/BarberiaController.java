@@ -38,11 +38,13 @@ public class BarberiaController {
         Usuario barberoEncontrado = usuarioService.obtenerUsuarioPorCorreo(correoBarbero);
 
         Barberia barberiaGuardada = repositorioDeBarberias.findByBarberoPropietario_CorreoElectronico(correoBarbero)
-                .map(barberiaExistente -> {
-                    barberiaExistente.setNombre(datosBarberia.getNombre());
-                    barberiaExistente.setDireccion(datosBarberia.getDireccion());
-                    barberiaExistente.setDescripcion(datosBarberia.getDescripcion());
-                    return repositorioDeBarberias.save(barberiaExistente);
+                .map(existente -> {
+                    existente.setNombre(datosBarberia.getNombre());
+                    existente.setDireccionCompleta(datosBarberia.getDireccionCompleta());
+                    existente.setZona(datosBarberia.getZona());
+                    existente.setHorario(datosBarberia.getHorario());
+                    existente.setDescripcion(datosBarberia.getDescripcion());
+                    return repositorioDeBarberias.save(existente);
                 })
                 .orElseGet(() -> {
                     datosBarberia.setBarberoPropietario(barberoEncontrado);
