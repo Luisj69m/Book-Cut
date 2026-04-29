@@ -18,9 +18,6 @@ public class PerfilController {
     @Autowired
     private UsuarioService usuarioService;
 
-    @Autowired
-    private CloudinaryService servicioCloudinary;
-
     @GetMapping
     public ResponseEntity<PerfilResponseDTO> obtenerPerfil() {
         String correoElectronico = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -31,17 +28,5 @@ public class PerfilController {
     public ResponseEntity<PerfilResponseDTO> actualizarPerfil(@RequestBody PerfilRequestDTO datosActualizados) {
         String correoElectronico = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(usuarioService.actualizarPerfil(correoElectronico, datosActualizados));
-    }
-
-    @PostMapping("/imagen")
-    public ResponseEntity<String> subirImagen(@RequestParam("file") MultipartFile archivoImagen) {
-        String correoElectronico = SecurityContextHolder.getContext().getAuthentication().getName();
-        try {
-            String urlImagenNube = servicioCloudinary.subirImagen(archivoImagen);
-            usuarioService.actualizarUrlImagen(correoElectronico, urlImagenNube);
-            return ResponseEntity.ok(urlImagenNube);
-        } catch (Exception excepcionSubida) {
-            return ResponseEntity.badRequest().body("Error al subir imagen a la nube: " + excepcionSubida.getMessage());
-        }
     }
 }
