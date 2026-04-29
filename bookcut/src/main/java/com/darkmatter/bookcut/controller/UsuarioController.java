@@ -49,8 +49,19 @@ public class UsuarioController {
     }
 
     @PostMapping("/registrar")
-    public Usuario registrar(@RequestBody Usuario nuevoUsuario) {
-        return usuarioService.registrarNuevoUsuario(nuevoUsuario);
+    public ResponseEntity<?> registrar(@RequestBody Usuario nuevoUsuario) {
+        try {
+            Usuario usuarioRegistrado = usuarioService.registrarNuevoUsuario(nuevoUsuario);
+            return ResponseEntity.status(HttpStatus.CREATED).body(usuarioRegistrado);
+        } catch (RuntimeException excepcion) {
+            Map<String, String> error = new HashMap<>();
+            error.put("mensaje", excepcion.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception excepcionGeneral) {
+            Map<String, String> error = new HashMap<>();
+            error.put("mensaje", "Error interno al registrar: " + excepcionGeneral.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
 
     @DeleteMapping("/eliminar/{idUsuario}")
