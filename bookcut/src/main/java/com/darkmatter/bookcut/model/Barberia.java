@@ -1,5 +1,6 @@
 package com.darkmatter.bookcut.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -28,6 +29,7 @@ public class Barberia {
 
     @OneToOne
     @JoinColumn(name = "id_usuario_barbero", referencedColumnName = "id_usuario", unique = true)
+    @JsonIgnore
     private Usuario barberoPropietario;
 
     public Barberia() {}

@@ -35,10 +35,17 @@ public class BarberiaController {
 
     @PutMapping("/mi-barberia/{correoBarbero}")
     public ResponseEntity<Barberia> guardarOActualizarBarberia(@PathVariable String correoBarbero, @RequestBody Barberia datosBarberia) {
+        // 1. Buscamos al usuario de forma segura
         Usuario barberoEncontrado = usuarioService.obtenerUsuarioPorCorreo(correoBarbero);
 
-        Barberia barberiaGuardada = repositorioDeBarberias.findByBarberoPropietario_CorreoElectronico(correoBarbero)
+        if (barberoEncontrado == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // 2. Buscamos si ya existe la barbería
+        Barberia barberiaFinal = repositorioDeBarberias.findByBarberoPropietario_CorreoElectronico(correoBarbero)
                 .map(existente -> {
+                    // Actualizamos campos
                     existente.setNombre(datosBarberia.getNombre());
                     existente.setDireccionCompleta(datosBarberia.getDireccionCompleta());
                     existente.setZona(datosBarberia.getZona());
@@ -47,10 +54,11 @@ public class BarberiaController {
                     return repositorioDeBarberias.save(existente);
                 })
                 .orElseGet(() -> {
+                    // Si es nueva, le vinculamos el usuario sí o sí antes de guardar
                     datosBarberia.setBarberoPropietario(barberoEncontrado);
                     return repositorioDeBarberias.save(datosBarberia);
                 });
 
-        return ResponseEntity.ok(barberiaGuardada);
+        return ResponseEntity.ok(barberiaFinal);
     }
 }
