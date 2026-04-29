@@ -17,35 +17,31 @@ public class ServicioController {
         this.repositorioDeServicios = repositorioDeServicios;
     }
 
-    // 1. Ver todos
-    @GetMapping
+    @GetMapping("/listar")
     public List<Servicio> obtenerTodosLosServicios() {
         return repositorioDeServicios.findAll();
     }
 
-    // 2. Crear un nuevo servicio
-    @PostMapping
+    @PostMapping("/crear")
     public Servicio crearServicio(@RequestBody Servicio nuevoServicio) {
         return repositorioDeServicios.save(nuevoServicio);
     }
 
-    // 3. Actualizar nombre o precio
-    @PutMapping("/{id}")
-    public ResponseEntity<Servicio> actualizarServicio(@PathVariable Long id, @RequestBody Servicio detallesServicio) {
-        return repositorioDeServicios.findById(id)
-                .map(servicio -> {
-                    servicio.setNombreServicio(detallesServicio.getNombreServicio());
-                    servicio.setPrecioServicio(detallesServicio.getPrecioServicio());
-                    return ResponseEntity.ok(repositorioDeServicios.save(servicio));
+    @PutMapping("/actualizar/{idServicio}")
+    public ResponseEntity<Servicio> actualizarServicio(@PathVariable Long idServicio, @RequestBody Servicio detallesServicio) {
+        return repositorioDeServicios.findById(idServicio)
+                .map(servicioEncontrado -> {
+                    servicioEncontrado.setNombreServicio(detallesServicio.getNombreServicio());
+                    servicioEncontrado.setPrecioServicio(detallesServicio.getPrecioServicio());
+                    return ResponseEntity.ok(repositorioDeServicios.save(servicioEncontrado));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // 4. Eliminar un servicio
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarServicio(@PathVariable Long id) {
-        if (repositorioDeServicios.existsById(id)) {
-            repositorioDeServicios.deleteById(id);
+    @DeleteMapping("/eliminar/{idServicio}")
+    public ResponseEntity<Void> eliminarServicio(@PathVariable Long idServicio) {
+        if (repositorioDeServicios.existsById(idServicio)) {
+            repositorioDeServicios.deleteById(idServicio);
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
