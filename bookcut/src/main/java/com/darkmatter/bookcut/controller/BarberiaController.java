@@ -34,31 +34,48 @@ public class BarberiaController {
     }
 
     @PutMapping("/mi-barberia/{correoBarbero}")
-    public ResponseEntity<Barberia> guardarOActualizarBarberia(@PathVariable String correoBarbero, @RequestBody Barberia datosBarberia) {
-        // 1. Buscamos al usuario de forma segura
-        Usuario barberoEncontrado = usuarioService.obtenerUsuarioPorCorreo(correoBarbero);
+    public ResponseEntity<?> guardarOActualizarBarberia(
+            @PathVariable String correoBarbero,
+            @RequestBody Barberia datosBarberia,
+            @AuthenticationPrincipal String usernameLogueado) { // Cogemos el usuario del Token
 
-        if (barberoEncontrado == null) {
-            return ResponseEntity.notFound().build();
+        // 1. PROTECCIÓN PRUEBA 5: ¿Es el dueño de la cuenta?
+        if (!correoBarbero.equalsIgnoreCase(usernameLogueado)) {
+            return ResponseEntity.status(403).body("No tienes permiso para editar una barbería que no es tuya.");
         }
 
-        // 2. Buscamos si ya existe la barbería
-        Barberia barberiaFinal = repositorioDeBarberias.findByBarberoPropietario_CorreoElectronico(correoBarbero)
-                .map(existente -> {
-                    // Actualizamos campos
-                    existente.setNombre(datosBarberia.getNombre());
-                    existente.setDireccionCompleta(datosBarberia.getDireccionCompleta());
-                    existente.setZona(datosBarberia.getZona());
-                    existente.setHorario(datosBarberia.getHorario());
-                    existente.setDescripcion(datosBarberia.getDescripcion());
-                    return repositorioDeBarberias.save(existente);
-                })
-                .orElseGet(() -> {
-                    // Si es nueva, le vinculamos el usuario sí o sí antes de guardar
-                    datosBarberia.setBarberoPropietario(barberoEncontrado);
-                    return repositorioDeBarberias.save(datosBarberia);
-                });
+        // 2. PROTECCIÓN PRUEBA 7: ¿El usuario existe?
+        Usuario barberoEncontrado = usuarioService.obtenerUsuarioPorCorreo(correoBarbero);
+        if (barberoEncontrado == null) {
+            return ResponseEntity.status(404).body("El barbero con correo " + correoBarbero + " no existe.");
+        }
 
-        return ResponseEntity.ok(barberiaFinal);
+        // 3. PROTECCIÓN PRUEBA 6: Evitar Nulos en campos obligatorios
+        if (datosBarberia.getNombre() == null || datosBarberia.getNombre().isEmpty() ||
+                datosBarberia.getDireccionCompleta() == null || datosBarberia.getDireccionCompleta().isEmpty()) {
+            return ResponseEntity.status(400).body("El nombre y la dirección completa son obligatorios.");
+        }
+
+        try {
+            Barberia barberiaFinal = repositorioDeBarberias.findByBarberoPropietario_CorreoElectronico(correoBarbero)
+                    .map(existente -> {
+                        existente.setNombre(datosBarberia.getNombre());
+                        existente.setDireccionCompleta(datosBarberia.getDireccionCompleta());
+                        existente.setZona(datosBarberia.getZona());
+                        existente.setHorario(datosBarberia.getHorario());
+                        existente.setDescripcion(datosBarberia.getDescripcion());
+                        return repositorioDeBarberias.save(existente);
+                    })
+                    .orElseGet(() -> {
+                        datosBarberia.setBarberoPropietario(barberoEncontrado);
+                        return repositorioDeBarberias.save(datosBarberia);
+                    });
+
+            return ResponseEntity.ok(barberiaFinal);
+
+        } catch (Exception e) {
+            // Captura cualquier otro error para que no salga el 500 feo
+            return ResponseEntity.status(500).body("Error interno al guardar: " + e.getMessage());
+        }
     }
 }
