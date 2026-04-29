@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface BarberoRepository extends JpaRepository<Barbero, Long> {
     List<Barbero> findByBarberiaAsignadaIdBarberia(Long idBarberia);
     Optional<Barbero> findByUsuarioAsignadoIdUsuario(Long idUsuario);
+    Optional<Barbero> findFirstByBarberiaAsignadaIdBarberia(Long idBarberia);
 }

@@ -1,16 +1,19 @@
 package com.darkmatter.bookcut.controller;
 
 import com.darkmatter.bookcut.DTO.CitaResponseDTO;
-import com.darkmatter.bookcut.model.Barbero;
-import com.darkmatter.bookcut.model.Cita;
-import com.darkmatter.bookcut.model.EstadoCita;
-import com.darkmatter.bookcut.repository.CitaRepository;
+import com.darkmatter.bookcut.model.*;
+import com.darkmatter.bookcut.repository.*;
 import com.darkmatter.bookcut.service.CitaService;
-import com.darkmatter.bookcut.repository.BarberoRepository;
+import com.darkmatter.bookcut.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @CrossOrigin(origins = "*")
 @RestController
@@ -26,10 +29,68 @@ public class CitaController {
     @Autowired
     private BarberoRepository barberoRepository;
 
+    @Autowired
+    private UsuarioService usuarioService;
+
+    @Autowired
+    private BarberiaRepository barberiaRepository;
+
+    @Autowired
+    private ServicioRepository  servicioRepository;
+
     @PostMapping("/crear")
-    public ResponseEntity<Cita> crearCita(@RequestBody Cita cita) {
-        Cita nuevaCita = citaService.crearNuevaCita(cita);
-        return ResponseEntity.ok(nuevaCita);
+    public ResponseEntity<?> crearCita(@RequestBody Map<String, Object> payload, @AuthenticationPrincipal String clienteEmail) {
+        try {
+            // 1. Extraer IDs del JSON
+            Long idBarberia = Long.valueOf(payload.get("idBarberia").toString());
+            Long idServicio = Long.valueOf(payload.get("idServicio").toString());
+            String fechaStr = payload.get("fechaHoraCita").toString();
+
+            // 2. Buscar objetos en la BD (Evita el error 11)
+            Usuario cliente = usuarioService.obtenerUsuarioPorCorreo(clienteEmail);
+            Optional<Barberia> barberiaOpt = barberiaRepository.findById(idBarberia);
+            Optional<Servicio> servicioOpt = servicioRepository.findById(idServicio);
+
+            if (barberiaOpt.isEmpty() || servicioOpt.isEmpty()) {
+                return ResponseEntity.status(404).body("La barbería o el servicio no existen.");
+            }
+
+            // 3. Validar Fecha (Evita el error 10 y 12)
+            LocalDateTime fechaCita;
+            try {
+                fechaCita = LocalDateTime.parse(fechaStr);
+            } catch (Exception e) {
+                return ResponseEntity.status(400).body("Formato de fecha inválido. Usa: YYYY-MM-DDTHH:mm:ss");
+            }
+
+            if (fechaCita.isBefore(LocalDateTime.now())) {
+                return ResponseEntity.status(400).body("No puedes programar citas en el pasado.");
+            }
+
+            // 4. Crear y guardar la cita
+            Cita nuevaCita = new Cita();
+
+// Usamos los nombres exactos de tus setters en Cita.java
+            nuevaCita.setClienteReserva(cliente); // Antes tenías setCliente
+            nuevaCita.setServicioContratado(servicioOpt.get()); // Antes tenías setServicio
+            nuevaCita.setFechaHoraCita(fechaCita);
+
+            nuevaCita.setEstadoCita(EstadoCita.PENDIENTE);
+
+            if (barberiaOpt.isPresent()) {
+                // Buscamos el objeto Barbero que pertenece a esa barbería
+                Barbero barberoReal = barberoRepository.findFirstByBarberiaAsignadaIdBarberia(idBarberia)
+                        .orElseThrow(() -> new RuntimeException("Esta barbería no tiene barberos asignados"));
+
+                nuevaCita.setBarberoAsignado(barberoReal);
+            }
+
+            return ResponseEntity.status(201).body(citaRepository.save(nuevaCita));
+
+        } catch (Exception e) {
+            // Esto captura cualquier otro error y evita el 500 genérico
+            return ResponseEntity.status(400).body("Error en los datos enviados: " + e.getMessage());
+        }
     }
 
     @PutMapping("/{idCita}/estado")
