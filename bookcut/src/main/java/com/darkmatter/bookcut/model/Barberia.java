@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -16,41 +18,29 @@ public class Barberia {
     @Column(name = "id_barberia")
     private Long idBarberia;
 
-    @Column(name = "nombre_barberia", nullable = false, length = 100)
-    private String nombreBarberia;
+    @Column(name = "nombre", nullable = false)
+    private String nombre;
 
-    @Column(name = "direccion_fisica", nullable = false, length = 255)
-    private String direccionFisica;
+    @Column(name = "direccion", nullable = false)
+    private String direccion;
 
-    public Barberia() {
-    }
+    @Column(name = "descripcion", length = 1000)
+    private String descripcion;
 
-    public Barberia(String nombreBarberia, String direccionFisica) {
-        this.nombreBarberia = nombreBarberia;
-        this.direccionFisica = direccionFisica;
-    }
+    @OneToOne
+    @JoinColumn(name = "id_usuario_barbero", referencedColumnName = "id_usuario", unique = true)
+    private Usuario barberoPropietario;
 
-    public Long getIdBarberia() {
-        return idBarberia;
-    }
+    public Barberia() {}
 
-    public void setIdBarberia(Long idBarberia) {
-        this.idBarberia = idBarberia;
-    }
-
-    public String getNombreBarberia() {
-        return nombreBarberia;
-    }
-
-    public void setNombreBarberia(String nombreBarberia) {
-        this.nombreBarberia = nombreBarberia;
-    }
-
-    public String getDireccionFisica() {
-        return direccionFisica;
-    }
-
-    public void setDireccionFisica(String direccionFisica) {
-        this.direccionFisica = direccionFisica;
-    }
+    public Long getIdBarberia() { return idBarberia; }
+    public void setIdBarberia(Long idBarberia) { this.idBarberia = idBarberia; }
+    public String getNombre() { return nombre; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
+    public String getDireccion() { return direccion; }
+    public void setDireccion(String direccion) { this.direccion = direccion; }
+    public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+    public Usuario getBarberoPropietario() { return barberoPropietario; }
+    public void setBarberoPropietario(Usuario barberoPropietario) { this.barberoPropietario = barberoPropietario; }
 }

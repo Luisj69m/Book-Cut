@@ -3,12 +3,9 @@ package com.darkmatter.bookcut.controller;
 import com.darkmatter.bookcut.model.Barberia;
 import com.darkmatter.bookcut.model.Usuario;
 import com.darkmatter.bookcut.repository.BarberiaRepository;
-import com.darkmatter.bookcut.security.JwtUtils;
 import com.darkmatter.bookcut.service.UsuarioService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @CrossOrigin(origins = "*")
@@ -18,12 +15,10 @@ public class BarberiaController {
 
     private final BarberiaRepository repositorioDeBarberias;
     private final UsuarioService usuarioService;
-    private final JwtUtils jwtUtil;
 
-    public BarberiaController(BarberiaRepository repositorioDeBarberias, UsuarioService usuarioService, JwtUtils jwtUtil) {
+    public BarberiaController(BarberiaRepository repositorioDeBarberias, UsuarioService usuarioService) {
         this.repositorioDeBarberias = repositorioDeBarberias;
         this.usuarioService = usuarioService;
-        this.jwtUtil = jwtUtil;
     }
 
     @GetMapping
@@ -31,22 +26,29 @@ public class BarberiaController {
         return repositorioDeBarberias.findAll();
     }
 
-    @PostMapping("/admin/crear")
-    public ResponseEntity<?> crearBarberia(
-            @RequestHeader("Authorization") String tokenHeader,
-            @RequestBody Barberia nuevaBarberia) {
-        try {
-            String tokenLimpio = tokenHeader.substring(7);
-            String correoAdmin = jwtUtil.obtenerUsernameDeToken(tokenLimpio);
-            Usuario admin = usuarioService.obtenerUsuarioPorCorreo(correoAdmin);
+    @GetMapping("/mi-barberia/{correoBarbero}")
+    public ResponseEntity<Barberia> obtenerBarberiaPorCorreo(@PathVariable String correoBarbero) {
+        return repositorioDeBarberias.findByBarberoPropietario_CorreoElectronico(correoBarbero)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 
-            if (!admin.getRolUsuario().name().equals("ADMIN")) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No eres administrador");
-            }
+    @PutMapping("/mi-barberia/{correoBarbero}")
+    public ResponseEntity<Barberia> guardarOActualizarBarberia(@PathVariable String correoBarbero, @RequestBody Barberia datosBarberia) {
+        Usuario barberoEncontrado = usuarioService.obtenerUsuarioPorCorreo(correoBarbero);
 
-            return ResponseEntity.ok(repositorioDeBarberias.save(nuevaBarberia));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
-        }
+        Barberia barberiaGuardada = repositorioDeBarberias.findByBarberoPropietario_CorreoElectronico(correoBarbero)
+                .map(barberiaExistente -> {
+                    barberiaExistente.setNombre(datosBarberia.getNombre());
+                    barberiaExistente.setDireccion(datosBarberia.getDireccion());
+                    barberiaExistente.setDescripcion(datosBarberia.getDescripcion());
+                    return repositorioDeBarberias.save(barberiaExistente);
+                })
+                .orElseGet(() -> {
+                    datosBarberia.setBarberoPropietario(barberoEncontrado);
+                    return repositorioDeBarberias.save(datosBarberia);
+                });
+
+        return ResponseEntity.ok(barberiaGuardada);
     }
 }
