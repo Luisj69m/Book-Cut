@@ -41,12 +41,10 @@ public class CitaController {
     @PostMapping("/crear")
     public ResponseEntity<?> crearCita(@RequestBody Map<String, Object> payload, @AuthenticationPrincipal String clienteEmail) {
         try {
-            // 1. Extraer IDs del JSON
             Long idBarberia = Long.valueOf(payload.get("idBarberia").toString());
             Long idServicio = Long.valueOf(payload.get("idServicio").toString());
             String fechaStr = payload.get("fechaHoraCita").toString();
 
-            // 2. Buscar objetos en la BD (Evita el error 11)
             Usuario cliente = usuarioService.obtenerUsuarioPorCorreo(clienteEmail);
             Optional<Barberia> barberiaOpt = barberiaRepository.findById(idBarberia);
             Optional<Servicio> servicioOpt = servicioRepository.findById(idServicio);
@@ -55,7 +53,6 @@ public class CitaController {
                 return ResponseEntity.status(404).body("La barbería o el servicio no existen.");
             }
 
-            // 3. Validar Fecha (Evita el error 10 y 12)
             LocalDateTime fechaCita;
             try {
                 fechaCita = LocalDateTime.parse(fechaStr);
@@ -67,20 +64,20 @@ public class CitaController {
                 return ResponseEntity.status(400).body("No puedes programar citas en el pasado.");
             }
 
-            // 4. Crear y guardar la cita
             Cita nuevaCita = new Cita();
-
-// Usamos los nombres exactos de tus setters en Cita.java
-            nuevaCita.setClienteReserva(cliente); // Antes tenías setCliente
-            nuevaCita.setServicioContratado(servicioOpt.get()); // Antes tenías setServicio
+            nuevaCita.setClienteReserva(cliente);
+            nuevaCita.setServicioContratado(servicioOpt.get());
             nuevaCita.setFechaHoraCita(fechaCita);
-
             nuevaCita.setEstadoCita(EstadoCita.PENDIENTE);
 
             if (barberiaOpt.isPresent()) {
-                // Buscamos el objeto Barbero que pertenece a esa barbería
                 Barbero barberoReal = barberoRepository.findFirstByBarberiaAsignadaIdBarberia(idBarberia)
                         .orElseThrow(() -> new RuntimeException("Esta barbería no tiene barberos asignados"));
+
+                boolean citaOcupada = citaRepository.existsByBarberoAsignadoAndFechaHoraCita(barberoReal, fechaCita);
+                if (citaOcupada) {
+                    return ResponseEntity.status(400).body("El barbero ya tiene una reserva a esa hora exacta.");
+                }
 
                 nuevaCita.setBarberoAsignado(barberoReal);
             }
@@ -88,7 +85,6 @@ public class CitaController {
             return ResponseEntity.status(201).body(citaRepository.save(nuevaCita));
 
         } catch (Exception e) {
-            // Esto captura cualquier otro error y evita el 500 genérico
             return ResponseEntity.status(400).body("Error en los datos enviados: " + e.getMessage());
         }
     }

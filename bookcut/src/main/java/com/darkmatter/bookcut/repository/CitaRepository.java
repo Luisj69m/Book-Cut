@@ -22,7 +22,7 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
     // ESTA ES LA LÍNEA CLAVE: He cambiado PerfilBarbero por Barbero para que coincida con tu modelo
     boolean existsByBarberoAsignado_IdPerfilBarberoAndFechaHoraCita(Long idBarbero, LocalDateTime fechaHora);
 
-    boolean existsByBarberoAsignadoAndFechaHoraCita(Barbero barbero, LocalDateTime fechaHora);
+    boolean existsByBarberoAsignadoAndFechaHoraCita(Barbero barberoAsignado, LocalDateTime fechaHoraCita);
     @Modifying
     @Transactional
     @Query("UPDATE Cita c SET c.estadoCita = :estado WHERE c.idCita = :idCita")
