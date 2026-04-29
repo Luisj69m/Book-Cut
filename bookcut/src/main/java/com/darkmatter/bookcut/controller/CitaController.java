@@ -26,11 +26,16 @@ public class CitaController {
     @Autowired
     private BarberoRepository barberoRepository;
 
+    @PostMapping("/crear")
+    public ResponseEntity<Cita> crearCita(@RequestBody Cita cita) {
+        Cita nuevaCita = citaService.crearNuevaCita(cita);
+        return ResponseEntity.ok(nuevaCita);
+    }
+
     @PutMapping("/{idCita}/estado")
     public ResponseEntity<String> actualizarEstado(@PathVariable Long idCita, @RequestBody String nuevoEstado) {
         String estadoLimpio = nuevoEstado.replaceAll("[^a-zA-Z]", "").trim().toUpperCase();
 
-        // Usamos el nuevo método del servicio para que envíe correos al aceptar/rechazar
         try {
             citaService.actualizarEstadoCita(idCita, estadoLimpio);
             return ResponseEntity.ok("Estado actualizado a " + estadoLimpio + " y cliente notificado.");
@@ -39,20 +44,8 @@ public class CitaController {
         }
     }
 
-    @PostMapping("/reservar")
-    public Cita reservar(@RequestBody Cita nuevaCita) {
-        return citaService.crearNuevaCita(nuevaCita);
-    }
-
-    @PostMapping
-    public ResponseEntity<Cita> crearCita(@RequestBody Cita cita) {
-        Cita nuevaCita = citaService.crearNuevaCita(cita);
-        return ResponseEntity.ok(nuevaCita);
-    }
-
     @GetMapping("/historial/{idUsuario}")
     public List<CitaResponseDTO> historial(@PathVariable Long idUsuario) {
-        // Asegúrate de usar el nombre exacto del método que pusimos en el Service
         return citaService.obtenerCitasPorUsuarioDTO(idUsuario);
     }
 
@@ -82,7 +75,6 @@ public class CitaController {
     @PutMapping("/{idCita}/finalizar")
     public ResponseEntity<String> finalizarCita(@PathVariable Long idCita) {
         try {
-            // Reutilizamos la lógica de actualizar estado pero directo a FINALIZADA
             citaService.actualizarEstadoCita(idCita, "COMPLETADA");
             return ResponseEntity.ok("Cita completada correctamente. El servicio ha sido cobrado.");
         } catch (Exception e) {
