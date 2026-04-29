@@ -24,7 +24,7 @@ public class Barberia {
     @Column(name = "horario")
     private String horario;
 
-    @Column(name = "descripcion", length = 1000)
+    @Column(name = "descripcion", columnDefinition = "TEXT")
     private String descripcion;
 
     @OneToOne

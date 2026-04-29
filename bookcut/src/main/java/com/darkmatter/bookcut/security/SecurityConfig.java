@@ -23,17 +23,30 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // 1. CORS configurado con el Bean de abajo
                 .cors(Customizer.withDefaults())
+
+                // 2. Desactivar CSRF para APIs REST
                 .csrf(csrf -> csrf.disable())
+
+                // 3. Política sin estado (JWT)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                 .authorizeHttpRequests(auth -> auth
+                        // Rutas abiertas para todo el mundo
                         .requestMatchers("/api/usuarios/registrar", "/api/usuarios/login").permitAll()
                         .requestMatchers("/api/usuarios/solicitar-recuperacion", "/api/usuarios/confirmar-recuperacion").permitAll()
-                        .requestMatchers("/api/barberias/**").permitAll() // Permitimos ver barberías sin login para la Home
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/barberias/**").permitAll()
                         .requestMatchers("/error").permitAll()
+
+                        // Solo BARBEROS o ADMIN pueden crear o editar barberías
+                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/barberias/mi-barberia/**").hasAnyRole("BARBERO", "ADMIN")
+
+                        // El resto de la API requiere estar autenticado
                         .anyRequest().authenticated()
                 );
 
+        // 4. Tu filtro JWT
         http.addFilterBefore(jwtRequestFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
