@@ -5,6 +5,7 @@ import com.darkmatter.bookcut.model.Usuario;
 import com.darkmatter.bookcut.repository.BarberiaRepository;
 import com.darkmatter.bookcut.service.UsuarioService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
