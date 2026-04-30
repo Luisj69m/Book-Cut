@@ -3,12 +3,10 @@ package com.darkmatter.bookcut.controller;
 import com.darkmatter.bookcut.DTO.PerfilRequestDTO;
 import com.darkmatter.bookcut.DTO.PerfilResponseDTO;
 import com.darkmatter.bookcut.service.UsuarioService;
-import com.darkmatter.bookcut.service.CloudinaryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/perfil")

@@ -19,6 +19,8 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
 
     List<Cita> findByBarberoAsignado_IdPerfilBarbero(Long idBarbero);
 
+    List<Cita> findByBarberoAsignadoAndFechaHoraCitaBetween(Barbero barbero, LocalDateTime inicioDia, LocalDateTime finDia);
+
     // ESTA ES LA LÍNEA CLAVE: He cambiado PerfilBarbero por Barbero para que coincida con tu modelo
     boolean existsByBarberoAsignado_IdPerfilBarberoAndFechaHoraCita(Long idBarbero, LocalDateTime fechaHora);
 

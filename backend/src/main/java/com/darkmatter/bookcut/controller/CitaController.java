@@ -34,42 +34,46 @@ public class CitaController {
     private ServicioRepository servicioRepository;
 
     @PostMapping("/crear")
-    public ResponseEntity<?> crearCita(@RequestBody Map<String, Object> payload, @AuthenticationPrincipal String clienteEmail) {
+    public ResponseEntity<?> crearCita(@RequestBody Map<String, Object> datosPeticion, @AuthenticationPrincipal String correoCliente) {
         try {
-            Long idBarberia = Long.valueOf(payload.get("idBarberia").toString());
-            Long idServicio = Long.valueOf(payload.get("idServicio").toString());
-            String fechaStr = payload.get("fechaHoraCita").toString();
-            Usuario cliente = usuarioService.obtenerUsuarioPorCorreo(clienteEmail);
-            Optional<Barberia> barberiaOpt = barberiaRepository.findById(idBarberia);
-            Optional<Servicio> servicioOpt = servicioRepository.findById(idServicio);
-            if (barberiaOpt.isEmpty() || servicioOpt.isEmpty()) {
-                return ResponseEntity.status(404).body("La barbería o el servicio no existen.");
-            }
-            LocalDateTime fechaCita;
+            Long identificadorBarberia = Long.valueOf(datosPeticion.get("idBarberia").toString());
+            Long identificadorServicio = Long.valueOf(datosPeticion.get("idServicio").toString());
+            String fechaTexto = datosPeticion.get("fechaHoraCita").toString();
+
+            Usuario clienteSolicitante = usuarioService.obtenerUsuarioPorCorreo(correoCliente);
+
+            Barberia barberiaEncontrada = barberiaRepository.findById(identificadorBarberia)
+                    .orElseThrow(() -> new RuntimeException("La barbería no existe."));
+            Servicio servicioSolicitado = servicioRepository.findById(identificadorServicio)
+                    .orElseThrow(() -> new RuntimeException("El servicio no existe."));
+
+            LocalDateTime fechaProgramada;
             try {
-                fechaCita = LocalDateTime.parse(fechaStr);
-            } catch (Exception e) {
+                fechaProgramada = LocalDateTime.parse(fechaTexto);
+            } catch (Exception excepcionFormato) {
                 return ResponseEntity.status(400).body("Formato de fecha inválido. Usa: YYYY-MM-DDTHH:mm:ss");
             }
-            if (fechaCita.isBefore(LocalDateTime.now())) {
+
+            if (fechaProgramada.isBefore(LocalDateTime.now())) {
                 return ResponseEntity.status(400).body("No puedes programar citas en el pasado.");
             }
-            Cita nuevaCita = new Cita();
-            nuevaCita.setClienteReserva(cliente);
-            nuevaCita.setServicioContratado(servicioOpt.get());
-            nuevaCita.setFechaHoraCita(fechaCita);
-            nuevaCita.setEstadoCita(EstadoCita.PENDIENTE);
-            if (barberiaOpt.isPresent()) {
-                Barbero barberoReal = barberoRepository.findFirstByBarberiaAsignadaIdBarberia(idBarberia).orElseThrow(() -> new RuntimeException("Esta barbería no tiene barberos asignados"));
-                boolean citaOcupada = citaRepository.existsByBarberoAsignadoAndFechaHoraCita(barberoReal, fechaCita);
-                if (citaOcupada) {
-                    return ResponseEntity.status(400).body("El barbero ya tiene una reserva a esa hora exacta.");
-                }
-                nuevaCita.setBarberoAsignado(barberoReal);
-            }
-            return ResponseEntity.status(201).body(citaRepository.save(nuevaCita));
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body("Error en los datos enviados: " + e.getMessage());
+
+            Barbero barberoDisponible = barberoRepository.findFirstByBarberiaAsignadaIdBarberia(identificadorBarberia)
+                    .orElseThrow(() -> new RuntimeException("Esta barbería no tiene barberos asignados."));
+
+            Cita citaPreparada = new Cita();
+            citaPreparada.setClienteReserva(clienteSolicitante);
+            citaPreparada.setServicioContratado(servicioSolicitado);
+            citaPreparada.setFechaHoraCita(fechaProgramada);
+            citaPreparada.setEstadoCita(EstadoCita.PENDIENTE);
+            citaPreparada.setBarberoAsignado(barberoDisponible);
+
+            Cita citaGuardada = citaService.crearNuevaCita(citaPreparada);
+
+            return ResponseEntity.status(201).body(citaGuardada);
+
+        } catch (Exception excepcionGeneral) {
+            return ResponseEntity.status(400).body("Error al procesar la reserva: " + excepcionGeneral.getMessage());
         }
     }
 

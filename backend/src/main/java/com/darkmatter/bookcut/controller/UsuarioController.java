@@ -19,6 +19,12 @@ public class UsuarioController {
     private final UsuarioService usuarioService;
 
     @Autowired
+    private com.darkmatter.bookcut.repository.BarberoRepository barberoRepository;
+
+    @Autowired
+    private com.darkmatter.bookcut.repository.BarberiaRepository barberiaRepository;
+
+    @Autowired
     private JwtUtils jwtUtil;
 
     public UsuarioController(UsuarioService usuarioService) {
@@ -95,24 +101,41 @@ public class UsuarioController {
 
     @PostMapping("/admin/registrar-barbero")
     public org.springframework.http.ResponseEntity<?> registrarBarbero(
-            @RequestHeader("Authorization") String tokenHeader,
-            @RequestBody Usuario nuevoBarbero) {
+            @RequestHeader("Authorization") String cabeceraToken,
+            @RequestBody java.util.Map<String, Object> datosPeticion) {
         try {
-            String tokenLimpio = tokenHeader.substring(7);
-            String correoAdmin = jwtUtil.obtenerUsernameDeToken(tokenLimpio);
+            String tokenExtraido = cabeceraToken.substring(7);
+            String correoAdministrador = jwtUtil.obtenerUsernameDeToken(tokenExtraido);
 
-            Usuario usuarioAdministrador = usuarioService.obtenerUsuarioPorCorreo(correoAdmin);
+            Usuario administradorVerificado = usuarioService.obtenerUsuarioPorCorreo(correoAdministrador);
 
-            if (!usuarioAdministrador.getRolUsuario().name().equals("ADMIN")) {
-                return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body("Acceso denegado: Requiere permisos de administrador");
+            if (!administradorVerificado.getRolUsuario().name().equals("ADMIN")) {
+                return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                        .body("Acceso denegado: Requiere permisos de administrador");
             }
 
+            Usuario nuevoBarbero = new Usuario();
+            nuevoBarbero.setNombre(datosPeticion.get("nombreUsuario").toString());
+            nuevoBarbero.setCorreoElectronico(datosPeticion.get("correoElectronico").toString());
+            nuevoBarbero.setContrasenaUsuario(datosPeticion.get("contrasenaUsuario").toString());
+            nuevoBarbero.setTelefono(datosPeticion.get("telefonoUsuario").toString());
             nuevoBarbero.setRolUsuario(com.darkmatter.bookcut.model.RolUsuario.BARBERO);
-            Usuario barberoGuardado = usuarioService.registrarUsuarioDesdeAdmin(nuevoBarbero);
 
-            return org.springframework.http.ResponseEntity.ok(barberoGuardado);
-        } catch (Exception excepcion) {
-            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR).body(excepcion.getMessage());
+            Usuario barberoRegistrado = usuarioService.registrarUsuarioDesdeAdmin(nuevoBarbero);
+
+            Long identificadorBarberia = Long.valueOf(datosPeticion.get("idBarberia").toString());
+            com.darkmatter.bookcut.model.Barberia barberiaDestino = barberiaRepository.findById(identificadorBarberia)
+                    .orElseThrow(() -> new RuntimeException("La barbería especificada no existe"));
+
+            com.darkmatter.bookcut.model.Barbero nuevoPerfilBarbero = new com.darkmatter.bookcut.model.Barbero();
+            nuevoPerfilBarbero.setUsuarioAsignado(barberoRegistrado);
+            nuevoPerfilBarbero.setBarberiaAsignada(barberiaDestino);
+            barberoRepository.save(nuevoPerfilBarbero);
+
+            return org.springframework.http.ResponseEntity.ok(barberoRegistrado);
+        } catch (Exception excepcionRegistro) {
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al registrar barbero: " + excepcionRegistro.getMessage());
         }
     }
 

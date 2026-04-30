@@ -5,6 +5,8 @@ import com.darkmatter.bookcut.DTO.ServicioDTO;
 import com.darkmatter.bookcut.model.Cita;
 import com.darkmatter.bookcut.repository.CitaRepository;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -21,31 +23,39 @@ public class CitaService {
     }
 
     public Cita crearNuevaCita(Cita nuevaCita) {
-        // 1. COMPROBACIÓN: Usamos el método que creamos en el Repository para ver si ya existe esa cita
-        boolean ocupado = repositorioDeCitas.existsByBarberoAsignadoAndFechaHoraCita(
-                nuevaCita.getBarberoAsignado(),
-                nuevaCita.getFechaHoraCita()
-        );
+        LocalDateTime inicioNuevaCita = nuevaCita.getFechaHoraCita();
+        int duracionNuevaCita = nuevaCita.getServicioContratado().getDuracionMinutos();
+        LocalDateTime finNuevaCita = inicioNuevaCita.plusMinutes(duracionNuevaCita);
 
-        if (ocupado) {
-            throw new RuntimeException("Error: El barbero ya tiene una cita a esa hora.");
+        LocalDateTime inicioDelDia = inicioNuevaCita.toLocalDate().atStartOfDay();
+        LocalDateTime finDelDia = inicioDelDia.plusDays(1).minusNanos(1);
+
+        List<Cita> citasDelDia = repositorioDeCitas.findByBarberoAsignadoAndFechaHoraCitaBetween(
+                nuevaCita.getBarberoAsignado(), inicioDelDia, finDelDia);
+
+        for (Cita citaExistente : citasDelDia) {
+            if (citaExistente.getEstadoCita() == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+                continue;
+            }
+
+            LocalDateTime inicioExistente = citaExistente.getFechaHoraCita();
+            int duracionExistente = citaExistente.getServicioContratado().getDuracionMinutos();
+            LocalDateTime finExistente = inicioExistente.plusMinutes(duracionExistente);
+
+            if (inicioNuevaCita.isBefore(finExistente) && finNuevaCita.isAfter(inicioExistente)) {
+                throw new RuntimeException("Error: El servicio se solapa con una cita que dura hasta las " + finExistente.toLocalTime());
+            }
         }
 
-        // 2. GUARDAR
         Cita citaGuardada = repositorioDeCitas.save(nuevaCita);
 
-        // 3. FORMATEAR FECHA
-        DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd/MM/yyyy 'a las' HH:mm");
+        java.time.format.DateTimeFormatter formateador = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy 'a las' HH:mm");
         String fechaFormateada = citaGuardada.getFechaHoraCita().format(formateador);
 
-        // 4. ENVIAR CORREO
         try {
-            emailService.enviarCorreoConfirmacion(
-                    citaGuardada.getClienteReserva().getCorreoElectronico(),
-                    fechaFormateada
-            );
-        } catch (Exception e) {
-            System.out.println("ERROR al enviar correo: " + e.getMessage());
+            emailService.enviarCorreoConfirmacion(citaGuardada.getClienteReserva().getCorreoElectronico(), fechaFormateada);
+        } catch (Exception excepcionCorreo) {
+            System.out.println("ERROR al enviar correo: " + excepcionCorreo.getMessage());
         }
 
         return citaGuardada;
