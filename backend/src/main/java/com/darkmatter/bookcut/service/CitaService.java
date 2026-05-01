@@ -73,6 +73,10 @@ public class CitaService {
         Cita cita = repositorioDeCitas.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
+        if (cita.getEstadoCita() == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA || cita.getEstadoCita() == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+            throw new RuntimeException("No se puede cancelar una cita que ya está " + cita.getEstadoCita());
+        }
+
         // Cambiamos estado en lugar de borrar
         cita.setEstadoCita(com.darkmatter.bookcut.model.EstadoCita.CANCELADA);
         repositorioDeCitas.save(cita);
@@ -97,22 +101,29 @@ public class CitaService {
         Cita cita = repositorioDeCitas.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
-        if ("FINALIZADA".equalsIgnoreCase(nuevoEstado) || "COMPLETADA".equalsIgnoreCase(nuevoEstado)) {
+        com.darkmatter.bookcut.model.EstadoCita estadoActual = cita.getEstadoCita();
+        com.darkmatter.bookcut.model.EstadoCita estadoSolicitado = com.darkmatter.bookcut.model.EstadoCita.valueOf(nuevoEstado.toUpperCase());
+
+        if (estadoActual == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA || estadoActual == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+            throw new RuntimeException("Error: Una cita " + estadoActual + " es definitiva y no puede cambiar de estado.");
+        }
+
+        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA) {
             if (java.time.LocalDateTime.now().isBefore(cita.getFechaHoraCita())) {
                 throw new RuntimeException("Error: No se puede finalizar una cita antes de que ocurra.");
             }
         }
 
-        cita.setEstadoCita(com.darkmatter.bookcut.model.EstadoCita.valueOf(nuevoEstado.toUpperCase()));
+        cita.setEstadoCita(estadoSolicitado);
         Cita citaActualizada = repositorioDeCitas.save(cita);
 
         String asuntoCorreo = "";
         String mensajeCorreo = "";
 
-        if ("ACEPTADA".equalsIgnoreCase(nuevoEstado)) {
+        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.ACEPTADA) {
             asuntoCorreo = "Cita Confirmada - Book&Cut";
             mensajeCorreo = "Hola, tu barbero ha aceptado tu cita.";
-        } else if ("RECHAZADA".equalsIgnoreCase(nuevoEstado)) {
+        } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.RECHAZADA) {
             asuntoCorreo = "Cita Rechazada - Book&Cut";
             mensajeCorreo = "Hola, el barbero ha rechazado tu solicitud.";
         }
