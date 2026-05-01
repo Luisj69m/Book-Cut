@@ -108,15 +108,25 @@ public class CitaController {
 
     @PutMapping("/cancelar/{idCita}")
     public ResponseEntity<String> cancelar(@PathVariable Long idCita, @AuthenticationPrincipal String usuarioLogueado) {
-        Cita cita = citaRepository.findById(idCita).orElse(null);
-        if (cita == null) return ResponseEntity.status(404).body("Cita no encontrada.");
-        String emailCliente = cita.getClienteReserva().getCorreoElectronico();
-        String emailBarbero = cita.getBarberoAsignado().getUsuarioAsignado().getCorreoElectronico();
-        if (!usuarioLogueado.equalsIgnoreCase(emailCliente) && !usuarioLogueado.equalsIgnoreCase(emailBarbero)) {
+        Cita citaEncontrada = citaRepository.findById(idCita).orElse(null);
+
+        if (citaEncontrada == null) {
+            return ResponseEntity.status(404).body("Cita no encontrada.");
+        }
+
+        String correoCliente = citaEncontrada.getClienteReserva().getCorreoElectronico();
+        String correoBarbero = citaEncontrada.getBarberoAsignado().getUsuarioAsignado().getCorreoElectronico();
+
+        if (!usuarioLogueado.equalsIgnoreCase(correoCliente) && !usuarioLogueado.equalsIgnoreCase(correoBarbero)) {
             return ResponseEntity.status(403).body("No tienes permiso para cancelar esta cita.");
         }
-        citaService.cancelarCita(idCita);
-        return ResponseEntity.ok("Cita cancelada correctamente.");
+
+        try {
+            citaService.cancelarCita(idCita);
+            return ResponseEntity.ok("Cita cancelada correctamente.");
+        } catch (RuntimeException excepcionEstado) {
+            return ResponseEntity.status(400).body(excepcionEstado.getMessage());
+        }
     }
 
     @GetMapping("/barbero/{idBarbero}/fecha/{fecha}")
