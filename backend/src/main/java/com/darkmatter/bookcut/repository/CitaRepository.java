@@ -21,6 +21,12 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
 
     List<Cita> findByBarberoAsignadoAndFechaHoraCitaBetween(Barbero barbero, LocalDateTime inicioDia, LocalDateTime finDia);
 
+    List<Cita> findByEstadoCitaAndFechaHoraCitaBetween(
+            com.darkmatter.bookcut.model.EstadoCita estadoCita,
+            java.time.LocalDateTime fechaInicio,
+            java.time.LocalDateTime fechaFin
+    );
+
     // ESTA ES LA LÍNEA CLAVE: He cambiado PerfilBarbero por Barbero para que coincida con tu modelo
     boolean existsByBarberoAsignado_IdPerfilBarberoAndFechaHoraCita(Long idBarbero, LocalDateTime fechaHora);
 

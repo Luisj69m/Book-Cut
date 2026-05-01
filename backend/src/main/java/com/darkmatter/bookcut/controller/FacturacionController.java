@@ -7,6 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,24 +21,46 @@ import java.util.Map;
 public class FacturacionController {
 
     @Autowired
-    private CitaRepository citaRepository;
+    private CitaRepository repositorioDeCitas;
 
     @GetMapping("/resumen")
-    public Map<String, Object> obtenerResumenIngresos() {
-        // 1. Buscamos todas las citas finalizadas
-        List<Cita> citasFinalizadas = citaRepository.findByEstadoCita(EstadoCita.COMPLETADA);
+    public Map<String, Object> obtenerResumenIngresos(@RequestParam(defaultValue = "siempre") String periodoFiltro) {
 
-        // 2. Calculamos el total sumando el precio de cada servicio
-        BigDecimal totalAcumulado = citasFinalizadas.stream()
+        LocalDateTime momentoActual = LocalDateTime.now();
+        LocalDateTime fechaInicioFiltro;
+        LocalDateTime fechaFinFiltro = momentoActual;
+
+        switch (periodoFiltro.toLowerCase()) {
+            case "dia":
+                fechaInicioFiltro = momentoActual.with(LocalTime.MIN);
+                break;
+            case "semana":
+                fechaInicioFiltro = momentoActual.with(DayOfWeek.MONDAY).with(LocalTime.MIN);
+                break;
+            case "mes":
+                fechaInicioFiltro = momentoActual.with(TemporalAdjusters.firstDayOfMonth()).with(LocalTime.MIN);
+                break;
+            default:
+                fechaInicioFiltro = LocalDateTime.of(2000, 1, 1, 0, 0);
+                break;
+        }
+
+        List<Cita> citasCompletadasFiltradas = repositorioDeCitas.findByEstadoCitaAndFechaHoraCitaBetween(
+                EstadoCita.COMPLETADA,
+                fechaInicioFiltro,
+                fechaFinFiltro
+        );
+
+        BigDecimal ingresosTotalesAcumulados = citasCompletadasFiltradas.stream()
                 .map(cita -> cita.getServicioContratado().getPrecioServicio())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 3. Preparamos la respuesta para el panel de ingresos
-        Map<String, Object> respuesta = new HashMap<>();
-        respuesta.put("totalIngresos", totalAcumulado);
-        respuesta.put("cantidadCitas", citasFinalizadas.size());
-        respuesta.put("citasDetalle", citasFinalizadas);
+        Map<String, Object> respuestaFacturacion = new HashMap<>();
+        respuestaFacturacion.put("totalIngresos", ingresosTotalesAcumulados);
+        respuestaFacturacion.put("cantidadCitas", citasCompletadasFiltradas.size());
+        respuestaFacturacion.put("citasDetalle", citasCompletadasFiltradas);
+        respuestaFacturacion.put("periodoConsultado", periodoFiltro);
 
-        return respuesta;
+        return respuestaFacturacion;
     }
 }
