@@ -34,7 +34,7 @@ public class CitaController {
     private ServicioRepository servicioRepository;
 
     @PostMapping("/crear")
-    public ResponseEntity<?> crearCita(@RequestBody Map<String, Object> datosPeticion, @AuthenticationPrincipal String correoCliente) {
+    public ResponseEntity<?> crearCita(@RequestBody Map<String, Object> datosPeticion, @AuthenticationPrincipal String correoCliente){
         try {
             Long identificadorBarberia = Long.valueOf(datosPeticion.get("idBarberia").toString());
             Long identificadorServicio = Long.valueOf(datosPeticion.get("idServicio").toString());
@@ -56,6 +56,11 @@ public class CitaController {
 
             if (fechaProgramada.isBefore(LocalDateTime.now())) {
                 return ResponseEntity.status(400).body("No puedes programar citas en el pasado.");
+            }
+
+            int horaSolicitada = fechaProgramada.getHour();
+            if (horaSolicitada < 9 || horaSolicitada >= 22) {
+                return ResponseEntity.status(400).body("Horario no válido. Las reservas solo están permitidas entre las 09:00 y las 22:00.");
             }
 
             Barbero barberoDisponible = barberoRepository.findFirstByBarberiaAsignadaIdBarberia(identificadorBarberia)
