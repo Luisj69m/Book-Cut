@@ -100,8 +100,12 @@ public class CitaController {
     }
 
     @GetMapping("/historial/{idUsuario}")
-    public List<CitaResponseDTO> historial(@PathVariable Long idUsuario) {
-        return citaService.obtenerCitasPorUsuarioDTO(idUsuario);
+    public ResponseEntity<?> historial(@PathVariable Long idUsuario, @AuthenticationPrincipal String correoLogueado) {
+        Usuario usuarioAutenticado = usuarioService.obtenerUsuarioPorCorreo(correoLogueado);
+        if (!usuarioAutenticado.getIdUsuario().equals(idUsuario)) {
+            return ResponseEntity.status(403).body("Acceso denegado: No puedes ver el historial de otro cliente.");
+        }
+        return ResponseEntity.ok(citaService.obtenerCitasPorUsuarioDTO(idUsuario));
     }
 
     @GetMapping("/barbero/{idUsuario}/{estado}")
