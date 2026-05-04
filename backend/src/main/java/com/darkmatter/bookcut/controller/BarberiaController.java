@@ -3,7 +3,9 @@ package com.darkmatter.bookcut.controller;
 import com.darkmatter.bookcut.model.Barberia;
 import com.darkmatter.bookcut.model.Usuario;
 import com.darkmatter.bookcut.repository.BarberiaRepository;
+import com.darkmatter.bookcut.repository.BarberoRepository;
 import com.darkmatter.bookcut.service.UsuarioService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +18,8 @@ public class BarberiaController {
 
     private final BarberiaRepository repositorioDeBarberias;
     private final UsuarioService usuarioService;
+    @Autowired
+    private BarberoRepository barberoRepository;
 
     public BarberiaController(BarberiaRepository repositorioDeBarberias, UsuarioService usuarioService) {
         this.repositorioDeBarberias = repositorioDeBarberias;
@@ -78,5 +82,15 @@ public class BarberiaController {
             // Captura cualquier otro error para que no salga el 500 feo
             return ResponseEntity.status(500).body("Error interno al guardar: " + e.getMessage());
         }
+    }
+
+    @GetMapping("/asignada/{correoBarbero}")
+    public org.springframework.http.ResponseEntity<?> obtenerBarberiaAsignada(@PathVariable String correoBarbero) {
+        java.util.Optional<com.darkmatter.bookcut.model.Barbero> barberoEncontrado = barberoRepository.findByUsuarioAsignado_CorreoElectronico(correoBarbero);
+
+        if (barberoEncontrado.isPresent()) {
+            return org.springframework.http.ResponseEntity.ok(barberoEncontrado.get().getBarberiaAsignada());
+        }
+        return org.springframework.http.ResponseEntity.status(404).body("El trabajador no existe o no tiene barberia asignada");
     }
 }
