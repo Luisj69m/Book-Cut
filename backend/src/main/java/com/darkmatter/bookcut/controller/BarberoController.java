@@ -24,4 +24,11 @@ public class BarberoController {
     public List<Barbero> listarTodos() {
         return repositorioDeBarberos.findAll();
     }
+
+    @GetMapping("/usuario/{idUsuario}")
+    public org.springframework.http.ResponseEntity<?> obtenerPerfilBarberoPorUsuario(@PathVariable Long idUsuario) {
+        return repositorioDeBarberos.findByUsuarioAsignadoIdUsuario(idUsuario)
+                .map(org.springframework.http.ResponseEntity::ok)
+                .orElse(org.springframework.http.ResponseEntity.notFound().build());
+    }
 }
