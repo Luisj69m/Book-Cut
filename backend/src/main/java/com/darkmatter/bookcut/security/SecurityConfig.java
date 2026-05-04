@@ -40,7 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
 
                         // Solo BARBEROS o ADMIN pueden crear o editar barberías
-                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/barberias/mi-barberia/**").hasAnyRole("BARBERO")
+                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/barberias/mi-barberia/**").hasAnyRole("BARBERO", "ADMIN")
 
                         // El resto de la API requiere estar autenticado
                         .anyRequest().authenticated()
