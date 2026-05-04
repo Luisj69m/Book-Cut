@@ -116,7 +116,6 @@ public class UsuarioController {
 
             Usuario nuevoBarbero = new Usuario();
             nuevoBarbero.setNombre(datosPeticion.get("nombreUsuario").toString());
-            nuevoBarbero.setNombre(datosPeticion.get("apellidos").toString());
             nuevoBarbero.setCorreoElectronico(datosPeticion.get("correoElectronico").toString());
             nuevoBarbero.setContrasenaUsuario(datosPeticion.get("contrasenaUsuario").toString());
             nuevoBarbero.setTelefono(datosPeticion.get("telefonoUsuario").toString());
