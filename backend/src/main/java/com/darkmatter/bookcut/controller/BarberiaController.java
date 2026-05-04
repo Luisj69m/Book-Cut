@@ -93,4 +93,14 @@ public class BarberiaController {
         }
         return org.springframework.http.ResponseEntity.status(404).body("El trabajador no existe o no tiene barberia asignada");
     }
+
+    @PostMapping("/crear")
+    public org.springframework.http.ResponseEntity<?> crearBarberia(@RequestBody com.darkmatter.bookcut.model.Barberia nuevaBarberia) {
+        try {
+            com.darkmatter.bookcut.model.Barberia barberiaGuardada = repositorioDeBarberias.save(nuevaBarberia);
+            return org.springframework.http.ResponseEntity.status(201).body(barberiaGuardada);
+        } catch (Exception excepcionCreacion) {
+            return org.springframework.http.ResponseEntity.status(400).body("Error al crear la barberia: " + excepcionCreacion.getMessage());
+        }
+    }
 }
