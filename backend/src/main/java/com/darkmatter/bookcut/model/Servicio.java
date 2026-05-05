@@ -1,5 +1,6 @@
 package com.darkmatter.bookcut.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -22,6 +23,7 @@ public class Servicio {
     @Column(name = "duracion_minutos")
     private Integer duracionMinutos;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "id_barberia", nullable = false)
     private Barberia barberia;
