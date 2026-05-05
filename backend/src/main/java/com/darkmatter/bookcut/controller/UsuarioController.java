@@ -150,13 +150,32 @@ public class UsuarioController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Acceso denegado");
             }
 
-            // He visto que no tienes el método obtenerTodos() todavía,
-            // así que usamos el findAll del repository directamente si quieres,
-            // pero lo ideal es que añadas en UsuarioService:
-            // public List<Usuario> listarTodo() { return usuarioRepository.findAll(); }
-            return ResponseEntity.ok(usuarioService.obtenerTodosLosUsuarios());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            java.util.List<Usuario> listaUsuarios = usuarioService.obtenerTodosLosUsuarios();
+            java.util.List<java.util.Map<String, Object>> respuestaMapeada = new java.util.ArrayList<>();
+
+            for (Usuario usuarioActual : listaUsuarios) {
+                java.util.Map<String, Object> usuarioMap = new java.util.HashMap<>();
+                usuarioMap.put("idUsuario", usuarioActual.getIdUsuario());
+                usuarioMap.put("nombre", usuarioActual.getNombre());
+                usuarioMap.put("correoElectronico", usuarioActual.getCorreoElectronico());
+                usuarioMap.put("telefono", usuarioActual.getTelefono());
+                usuarioMap.put("rolUsuario", usuarioActual.getRolUsuario());
+
+                if (usuarioActual.getRolUsuario() != null && usuarioActual.getRolUsuario().name().equals("BARBERO")) {
+                    barberoRepository.findByUsuarioAsignadoIdUsuario(usuarioActual.getIdUsuario())
+                            .ifPresentOrElse(
+                                    barbero -> usuarioMap.put("nombreBarberia", barbero.getBarberiaAsignada().getNombre()),
+                                    () -> usuarioMap.put("nombreBarberia", "Sin asignar")
+                            );
+                } else {
+                    usuarioMap.put("nombreBarberia", null);
+                }
+                respuestaMapeada.add(usuarioMap);
+            }
+
+            return ResponseEntity.ok(respuestaMapeada);
+        } catch (Exception excepcionListado) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(excepcionListado.getMessage());
         }
     }
 

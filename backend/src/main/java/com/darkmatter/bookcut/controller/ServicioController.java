@@ -1,6 +1,8 @@
 package com.darkmatter.bookcut.controller;
 
+import com.darkmatter.bookcut.model.Barberia;
 import com.darkmatter.bookcut.model.Servicio;
+import com.darkmatter.bookcut.repository.BarberiaRepository;
 import com.darkmatter.bookcut.repository.CitaRepository;
 import com.darkmatter.bookcut.repository.ServicioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +19,9 @@ public class ServicioController {
     private final ServicioRepository repositorioDeServicios;
 
     @Autowired
+    private BarberiaRepository  barberiaRepository;
+
+    @Autowired
     private CitaRepository citaRepository;
 
     public ServicioController(ServicioRepository repositorioDeServicios) {
@@ -28,12 +33,21 @@ public class ServicioController {
         return repositorioDeServicios.findAll();
     }
 
-    @PostMapping("/crear")
-    public ResponseEntity<?> crearServicio(@RequestBody Servicio nuevoServicio) {
+
+    @PostMapping("/barberia/{idBarberia}")
+    public ResponseEntity<?> crearServicioParaBarberia(@PathVariable Long idBarberia, @RequestBody Servicio nuevoServicio) {
         try {
-            return ResponseEntity.ok(repositorioDeServicios.save(nuevoServicio));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error al crear servicio: " + e.getMessage());
+            java.util.Optional<Barberia> barberiaEncontrada = barberiaRepository.findById(idBarberia);
+
+            if (barberiaEncontrada.isPresent()) {
+                nuevoServicio.setBarberia(barberiaEncontrada.get());
+                Servicio servicioGuardado = repositorioDeServicios.save(nuevoServicio);
+                return ResponseEntity.ok(servicioGuardado);
+            } else {
+                return ResponseEntity.status(404).body("La barbería no existe.");
+            }
+        } catch (Exception excepcionCreacion) {
+            return ResponseEntity.badRequest().body("Error al crear servicio: " + excepcionCreacion.getMessage());
         }
     }
 
