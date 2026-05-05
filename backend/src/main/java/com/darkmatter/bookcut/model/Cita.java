@@ -37,6 +37,9 @@ public class Cita {
     @Column(name = "estado_cita", nullable = false)
     private EstadoCita estadoCita;
 
+    @Column(name = "precio_final", precision = 10, scale = 2)
+    private java.math.BigDecimal precioFinal;
+
     public Cita() {
     }
 
@@ -95,4 +98,13 @@ public class Cita {
     public void setEstadoCita(EstadoCita estadoCita) {
         this.estadoCita = estadoCita;
     }
+
+    public java.math.BigDecimal getPrecioFinal() {
+        return precioFinal;
+    }
+
+    public void setPrecioFinal(java.math.BigDecimal precioFinal) {
+        this.precioFinal = precioFinal;
+    }
+
 }

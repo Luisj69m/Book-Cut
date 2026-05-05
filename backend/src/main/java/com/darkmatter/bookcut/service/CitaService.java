@@ -104,13 +104,47 @@ public class CitaService {
         com.darkmatter.bookcut.model.EstadoCita estadoActual = cita.getEstadoCita();
         com.darkmatter.bookcut.model.EstadoCita estadoSolicitado = com.darkmatter.bookcut.model.EstadoCita.valueOf(nuevoEstado.toUpperCase());
 
-        if (estadoActual == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA || estadoActual == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+        if (estadoActual == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA
+                || estadoActual == com.darkmatter.bookcut.model.EstadoCita.CANCELADA
+                || estadoActual == com.darkmatter.bookcut.model.EstadoCita.RECHAZADA
+                || estadoActual == com.darkmatter.bookcut.model.EstadoCita.VENCIDA) {
             throw new RuntimeException("Error: Una cita " + estadoActual + " es definitiva y no puede cambiar de estado.");
+        }
+
+        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.VENCIDA) {
+            throw new RuntimeException("Error: El estado VENCIDA solo se asigna automáticamente por el sistema.");
+        }
+
+        if (estadoActual == com.darkmatter.bookcut.model.EstadoCita.PENDIENTE) {
+            if (estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.ACEPTADA
+                    && estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.RECHAZADA
+                    && estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+                throw new RuntimeException("Error: Una cita PENDIENTE solo puede pasar a ACEPTADA, RECHAZADA o CANCELADA.");
+            }
+        }
+
+        if (estadoActual == com.darkmatter.bookcut.model.EstadoCita.ACEPTADA) {
+            if (estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.COMPLETADA
+                    && estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+                throw new RuntimeException("Error: Una cita ACEPTADA solo puede pasar a COMPLETADA o CANCELADA.");
+            }
         }
 
         if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA) {
             if (java.time.LocalDateTime.now().isBefore(cita.getFechaHoraCita())) {
                 throw new RuntimeException("Error: No se puede finalizar una cita antes de que ocurra.");
+            }
+        }
+
+        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+            if (java.time.LocalDateTime.now().isAfter(cita.getFechaHoraCita())) {
+                throw new RuntimeException("Error: No se puede cancelar una cita cuya fecha ya ha pasado.");
+            }
+        }
+
+        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.ACEPTADA) {
+            if (cita.getServicioContratado() != null && cita.getServicioContratado().getPrecioServicio() != null) {
+                cita.setPrecioFinal(cita.getServicioContratado().getPrecioServicio());
             }
         }
 
@@ -126,6 +160,12 @@ public class CitaService {
         } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.RECHAZADA) {
             asuntoCorreo = "Cita Rechazada - Book&Cut";
             mensajeCorreo = "Hola, el barbero ha rechazado tu solicitud.";
+        } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA) {
+            asuntoCorreo = "Cita Completada - Book&Cut";
+            mensajeCorreo = "Hola, tu cita ha sido finalizada correctamente. Gracias por confiar en nosotros.";
+        } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+            asuntoCorreo = "Cita Cancelada - Book&Cut";
+            mensajeCorreo = "Hola, tu cita ha sido cancelada.";
         }
 
         if (!asuntoCorreo.isEmpty()) {

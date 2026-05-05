@@ -52,7 +52,15 @@ public class FacturacionController {
         );
 
         BigDecimal ingresosTotalesAcumulados = citasCompletadasFiltradas.stream()
-                .map(cita -> cita.getServicioContratado().getPrecioServicio())
+                .map(cita -> {
+                    if (cita.getPrecioFinal() != null) {
+                        return cita.getPrecioFinal();
+                    }
+                    if (cita.getServicioContratado() != null && cita.getServicioContratado().getPrecioServicio() != null) {
+                        return cita.getServicioContratado().getPrecioServicio();
+                    }
+                    return BigDecimal.ZERO;
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Map<String, Object> respuestaFacturacion = new HashMap<>();
