@@ -43,4 +43,6 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
     List<Cita> findByEstadoCita(EstadoCita estadoCita);
 
     void deleteByClienteReserva_IdUsuario(Long idUsuario);
+
+    List<Cita> findByBarberoAsignado_BarberiaAsignada_IdBarberia(Long idBarberia);
 }

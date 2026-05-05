@@ -1,11 +1,7 @@
 package com.darkmatter.bookcut.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 
 @Entity
@@ -25,6 +21,10 @@ public class Servicio {
 
     @Column(name = "duracion_minutos")
     private Integer duracionMinutos;
+
+    @ManyToOne
+    @JoinColumn(name = "id_barberia", nullable = false)
+    private Barberia barberia;
 
     public Servicio() {
     }
@@ -64,5 +64,13 @@ public class Servicio {
 
     public void setDuracionMinutos(Integer duracionMinutos) {
         this.duracionMinutos = duracionMinutos;
+    }
+
+    public Barberia getBarberia() {
+        return barberia;
+    }
+
+    public void setBarberia(Barberia barberia) {
+        this.barberia = barberia;
     }
 }

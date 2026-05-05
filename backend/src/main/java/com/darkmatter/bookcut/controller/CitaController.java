@@ -171,4 +171,17 @@ public class CitaController {
             return ResponseEntity.status(500).body("Error al obtener el listado global de citas: " + excepcionConsulta.getMessage());
         }
     }
+
+    @GetMapping("/barberia/{idBarberia}")
+    public ResponseEntity<?> obtenerCitasPorBarberia(@PathVariable Long idBarberia) {
+        try {
+            List<Cita> citasDelLocal = citaRepository.findByBarberoAsignado_BarberiaAsignada_IdBarberia(idBarberia);
+            if (citasDelLocal.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(citasDelLocal);
+        } catch (Exception excepcionConsulta) {
+            return ResponseEntity.status(500).body("Error al obtener las citas del local: " + excepcionConsulta.getMessage());
+        }
+    }
 }

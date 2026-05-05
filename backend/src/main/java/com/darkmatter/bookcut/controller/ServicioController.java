@@ -73,4 +73,17 @@ public class ServicioController {
             return ResponseEntity.status(500).body("Error interno: " + excepcion.getMessage());
         }
     }
+
+    @GetMapping("/barberia/{idBarberia}")
+    public ResponseEntity<?> obtenerServiciosPorBarberia(@PathVariable Long idBarberia) {
+        try {
+            List<Servicio> listadoServicios = repositorioDeServicios.findByBarberia_IdBarberia(idBarberia);
+            if (listadoServicios.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(listadoServicios);
+        } catch (Exception excepcionConsulta) {
+            return ResponseEntity.status(500).body("Error al obtener servicios: " + excepcionConsulta.getMessage());
+        }
+    }
 }
