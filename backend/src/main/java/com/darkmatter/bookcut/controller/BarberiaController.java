@@ -103,4 +103,39 @@ public class BarberiaController {
             return org.springframework.http.ResponseEntity.status(400).body("Error al crear la barberia: " + excepcionCreacion.getMessage());
         }
     }
+
+    // 1. Eliminar Barbería por ID
+    @DeleteMapping("/{idBarberia}")
+    public ResponseEntity<?> eliminarBarberia(@PathVariable Long idBarberia) {
+        return repositorioDeBarberias.findById(idBarberia)
+                .map(barberiaEncontrada -> {
+                    try {
+                        repositorioDeBarberias.delete(barberiaEncontrada);
+                        return ResponseEntity.ok().body("Barbería eliminada correctamente.");
+                    } catch (Exception excepcionEliminacion) {
+                        return ResponseEntity.status(400).body("No se puede eliminar la barbería: existen registros asociados (barberos o citas).");
+                    }
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // 2. Actualizar Barbería por ID (General)
+    @PutMapping("/{idBarberia}")
+    public ResponseEntity<?> actualizarBarberiaGeneral(
+            @PathVariable Long idBarberia,
+            @RequestBody Barberia nuevosDatos) {
+
+        return repositorioDeBarberias.findById(idBarberia)
+                .map(barberiaExistente -> {
+                    barberiaExistente.setNombre(nuevosDatos.getNombre());
+                    barberiaExistente.setDireccionCompleta(nuevosDatos.getDireccionCompleta());
+                    barberiaExistente.setZona(nuevosDatos.getZona());
+                    barberiaExistente.setHorario(nuevosDatos.getHorario());
+                    barberiaExistente.setDescripcion(nuevosDatos.getDescripcion());
+
+                    Barberia actualizada = repositorioDeBarberias.save(barberiaExistente);
+                    return ResponseEntity.ok(actualizada);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
 }
