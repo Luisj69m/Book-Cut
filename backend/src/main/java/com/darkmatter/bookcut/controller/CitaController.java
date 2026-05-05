@@ -158,4 +158,17 @@ public class CitaController {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
+
+    @GetMapping("/todas")
+    public ResponseEntity<?> obtenerTodasLasCitasAbsolutas() {
+        try {
+            List<Cita> listadoCompletoCitas = citaRepository.findAll();
+            if (listadoCompletoCitas.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(listadoCompletoCitas);
+        } catch (Exception excepcionConsulta) {
+            return ResponseEntity.status(500).body("Error al obtener el listado global de citas: " + excepcionConsulta.getMessage());
+        }
+    }
 }
