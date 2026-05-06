@@ -1,8 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:frontend/utils/api_config.dart';
 
 class ProfileClientScreen extends StatefulWidget {
   const ProfileClientScreen({super.key});
@@ -21,10 +18,6 @@ class _ProfileClientScreenState extends State<ProfileClientScreen> {
   final TextEditingController _telefonoController = TextEditingController();
 
   bool _isLoading = true;
-  File? _imagenPerfil;
-
-  // ¡AQUÍ ESTÁ LA VARIABLE NUEVA!
-  String? fotoUrlServidor;
 
   @override
   void initState() {
@@ -35,36 +28,21 @@ class _ProfileClientScreenState extends State<ProfileClientScreen> {
   // --- 1. CARGAR DATOS DESDE EL BACKEND ---
   Future<void> _cargarDatos() async {
     try {
-      print("⏳ Pidiendo datos al servidor...");
       final datos = await _apiService.getPerfil();
-
-      print("🕵️‍♂️ DATOS DEL PERFIL RECIBIDOS: $datos");
-
       setState(() {
         _nombreController.text = datos['nombre'] ?? "";
         _apellidosController.text = datos['apellidos'] ?? "";
         _emailController.text = datos['correoElectronico'] ?? "";
         _telefonoController.text = datos['telefono'] ?? "";
-
-        String? nombreArchivo = datos['urlFotoPerfil'];
-        if (nombreArchivo != null && nombreArchivo.isNotEmpty) {
-
-          fotoUrlServidor = "${ApiConfig.baseUrl}/perfil/imagen/$nombreArchivo";
-        } else {
-          fotoUrlServidor = null;
-        }
-
         _isLoading = false;
       });
     } catch (e) {
-
-      print("❌ ERROR AL CARGAR EL PERFIL: $e");
-
       setState(() => _isLoading = false);
       _mostrarSnackBar("Error al cargar datos", Colors.redAccent);
     }
   }
 
+  // --- 2. GUARDAR DATOS ---
   Future<void> _guardarPerfil() async {
     if (_nombreController.text.isEmpty) {
       _mostrarSnackBar("El nombre es obligatorio", Colors.orange);
@@ -74,25 +52,16 @@ class _ProfileClientScreenState extends State<ProfileClientScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Guardamos los datos de texto (Nombre, Apellidos, Teléfono)
       bool exitoDatos = await _apiService.actualizarPerfil(
         _nombreController.text.trim(),
         _apellidosController.text.trim(),
         _telefonoController.text.trim(),
       );
 
-      // 2. Si hay una foto nueva seleccionada, la subimos
-      bool exitoFoto = true;
-      if (_imagenPerfil != null) {
-        exitoFoto = await _apiService.subirImagenPerfil(_imagenPerfil!);
-      }
-
       setState(() => _isLoading = false);
 
-      if (exitoDatos && exitoFoto) {
-        _mostrarSnackBar("¡Perfil y foto actualizados!", Colors.green);
-      } else if (exitoDatos) {
-        _mostrarSnackBar("Datos guardados, pero hubo un error con la foto", Colors.orange);
+      if (exitoDatos) {
+        _mostrarSnackBar("¡Perfil actualizado!", Colors.green);
       } else {
         _mostrarSnackBar("Error al guardar los cambios", Colors.red);
       }
@@ -100,23 +69,6 @@ class _ProfileClientScreenState extends State<ProfileClientScreen> {
       setState(() => _isLoading = false);
       _mostrarSnackBar("Fallo en la conexión", Colors.red);
     }
-  }
-
-  // --- 3. SELECCIONAR IMAGEN DE LA GALERÍA ---
-  Future<void> _seleccionarImagen() async {
-
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() {
-        _imagenPerfil = File(pickedFile.path);
-      });
-      // (Opcional) Aquí llamaríamos a un endpoint para subir la foto
-    }
-
-
-
   }
 
   void _mostrarSnackBar(String mensaje, Color color) {
@@ -144,7 +96,7 @@ class _ProfileClientScreenState extends State<ProfileClientScreen> {
           bottom: false,
           child: Column(
             children: [
-              // --- HEADER CON BOTÓN ATRÁS ---
+              // --- HEADER ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 child: Row(
@@ -157,16 +109,14 @@ class _ProfileClientScreenState extends State<ProfileClientScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 10),
 
-              // --- CONTENEDOR BLANCO CON LA FOTO FLOTANDO ---
+              // --- CONTENEDOR BLANCO ---
               Expanded(
                 child: Stack(
                   clipBehavior: Clip.none,
                   alignment: Alignment.topCenter,
                   children: [
-                    // El fondo blanco curvado
                     Container(
                       margin: const EdgeInsets.only(top: 60),
                       width: double.infinity,
@@ -174,50 +124,27 @@ class _ProfileClientScreenState extends State<ProfileClientScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
                       ),
-                      // Mientras carga, mostramos la ruedita. Si no, el formulario.
                       child: _isLoading
                           ? const Center(child: CircularProgressIndicator(color: Color(0xFF381483)))
                           : _buildFormulario(),
                     ),
 
-                    // La Foto de Perfil Flotante
+                    // AVATAR ESTÁTICO (Sin cámara ni botones)
                     Positioned(
                       top: 0,
-                      child: GestureDetector(
-                        onTap: _seleccionarImagen,
-                        child: Stack(
-                          alignment: Alignment.bottomRight,
-                          children: [
-                            Container(
-                              width: 120,
-                              height: 120,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.grey.shade200,
-                                border: Border.all(color: Colors.white, width: 5),
-                                boxShadow: const [
-                                  BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 5))
-                                ],
-                              ),
-                              child: ClipOval(
-                                child: _imagenPerfil != null
-                                    ? Image.file(_imagenPerfil!, fit: BoxFit.cover)
-                                    : (fotoUrlServidor != null && fotoUrlServidor!.isNotEmpty)
-                                    ? Image.network(fotoUrlServidor!, fit: BoxFit.cover)
-                                    : Icon(Icons.person, size: 70, color: Colors.grey.shade400),
-                              ),
-                            ),
-                            // Botón de editar (lapicito)
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFE96D71),
-                                shape: BoxShape.circle,
-                                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                              ),
-                              child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                            ),
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.grey.shade100,
+                          border: Border.all(color: Colors.white, width: 5),
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 5))
                           ],
+                        ),
+                        child: const ClipOval(
+                          child: Icon(Icons.person, size: 80, color: Color(0xFF381483)),
                         ),
                       ),
                     ),
@@ -237,67 +164,36 @@ class _ProfileClientScreenState extends State<ProfileClientScreen> {
       padding: const EdgeInsets.only(top: 80, left: 30, right: 30, bottom: 30),
       physics: const BouncingScrollPhysics(),
       children: [
-        // Títulos
         const Center(
           child: Text("Información Personal", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF381483))),
         ),
-        const SizedBox(height: 5),
-        Center(
-          child: Text("Mantén tus datos actualizados", style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
-        ),
         const SizedBox(height: 35),
-
-        // Nombre
         _buildTextField(label: "Nombre", icono: Icons.person_outline, controller: _nombreController),
         const SizedBox(height: 20),
-
-        // Apellidos
         _buildTextField(label: "Apellidos", icono: Icons.badge_outlined, controller: _apellidosController),
         const SizedBox(height: 20),
-
-        // Correo Electrónico (BLOQUEADO: readOnly = true)
-        _buildTextField(
-            label: "Correo Electrónico",
-            icono: Icons.email_outlined,
-            controller: _emailController,
-            isEmail: true,
-            readOnly: true // Para que no se pueda modificar
-        ),
+        _buildTextField(label: "Correo Electrónico", icono: Icons.email_outlined, controller: _emailController, isEmail: true, readOnly: true),
         const SizedBox(height: 20),
-
-        // Teléfono
         _buildTextField(label: "Teléfono", icono: Icons.phone_outlined, controller: _telefonoController, isPhone: true),
         const SizedBox(height: 40),
-
-        // Botón de Guardar
         SizedBox(
           width: double.infinity,
           height: 55,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2962FF), // Azul premium
+              backgroundColor: const Color(0xFF2962FF),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
               elevation: 5,
-              shadowColor: const Color(0xFF2962FF).withOpacity(0.5),
             ),
             onPressed: _guardarPerfil,
-            child: const Text("Guardar Cambios", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1)),
+            child: const Text("Guardar Cambios", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ),
-        const SizedBox(height: 20),
       ],
     );
   }
 
-  // --- WIDGET REUTILIZABLE PARA LOS CAMPOS DE TEXTO ---
-  Widget _buildTextField({
-    required String label,
-    required IconData icono,
-    required TextEditingController controller,
-    bool isEmail = false,
-    bool isPhone = false,
-    bool readOnly = false, // Añadimos esto para controlar si es editable
-  }) {
+  Widget _buildTextField({required String label, required IconData icono, required TextEditingController controller, bool isEmail = false, bool isPhone = false, bool readOnly = false}) {
     return TextField(
       controller: controller,
       readOnly: readOnly,
@@ -307,15 +203,9 @@ class _ProfileClientScreenState extends State<ProfileClientScreen> {
         labelStyle: TextStyle(color: Colors.grey.shade600),
         prefixIcon: Icon(icono, color: readOnly ? Colors.grey : const Color(0xFF381483)),
         filled: true,
-        fillColor: readOnly ? Colors.grey.shade200 : Colors.grey.shade50, // Más oscuro si está bloqueado
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide(color: readOnly ? Colors.transparent : Colors.grey.shade200, width: 2),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide(color: readOnly ? Colors.transparent : const Color(0xFF381483), width: 2),
-        ),
+        fillColor: readOnly ? Colors.grey.shade200 : Colors.grey.shade50,
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: readOnly ? Colors.transparent : Colors.grey.shade200, width: 2)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: readOnly ? Colors.transparent : const Color(0xFF381483), width: 2)),
       ),
     );
   }

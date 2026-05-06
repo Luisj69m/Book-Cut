@@ -49,11 +49,11 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() { _isLoading = true; });
 
     try {
-      // Llamamos a nuestro ApiService (que ahora guarda el token en secreto)
+      // Llamamos a nuestro ApiService
       final usuario = await ApiService().login(email, password);
 
-      // ¡ATENCIÓN AQUÍ! Iván dice que la variable ahora se llama "rol" a secas
-      if (usuario['rol'] == 'BARBERO') {
+      // 👇 AQUÍ ESTÁ EL ARREGLO: Usamos 'rolUsuario' tal como lo manda el servidor
+      if (usuario['rolUsuario'] == 'BARBERO') {
         print("¡Es un barbero! ID: ${usuario['idUsuario']}");
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -64,8 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => BarberHomeScreen(
-              // Iván quitó el nombre, así que ponemos un texto genérico o su propio correo
-              barberName: usuario['correoElectronico'].split('@')[0], // Truquito para sacar el nombre del email
+              barberName: usuario['correoElectronico'].split('@')[0],
               shopName: "La Rodola BarberShop",
               idUsuarioBarbero: usuario['idUsuario'],
             ),
@@ -189,17 +188,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 35),
+                      const SizedBox(height: 40),
 
-                      // Botón Iniciar Sesión (Cliente)
+                      // Botón Iniciar Sesión (Único y centralizado)
                       _buildGlowingButton("Iniciar Sesión", _procesarLogin),
 
-                      const SizedBox(height: 20),
-
-                      // Botón Iniciar Sesión (Barbero)
-                      _buildGlowingButton("Iniciar sesion como Barbero", _procesarLogin),
-
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 35), // Espacio ajustado al quitar el otro botón
 
                       Center(
                         child: InkWell(
@@ -219,17 +213,18 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 15),
+                      const SizedBox(height: 20),
                       Center(
                         child: InkWell(
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+                              // 👇 Arreglado: Ahora viaja al registro correcto
+                              MaterialPageRoute(builder: (context) => const RegisterClientScreen()),
                             );
                           },
                           child: Text(
-                            "No estas registrado? Registrate!",
+                            "¿No estás registrado? ¡Regístrate!",
                             style: TextStyle(
                                 color: Colors.grey.shade500,
                                 decoration: TextDecoration.underline,
@@ -280,7 +275,7 @@ class _LoginScreenState extends State<LoginScreen> {
             width: 20,
             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
         )
-            : Text(text, style: const TextStyle(fontSize: 15)),
+            : Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       ),
     );
   }

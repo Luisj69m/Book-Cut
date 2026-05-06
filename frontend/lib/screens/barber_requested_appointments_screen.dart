@@ -15,21 +15,21 @@ class _BarberRequestedAppointmentsScreenState extends State<BarberRequestedAppoi
   bool _isLoading = true;
   final ApiService _apiService = ApiService();
 
+  final mainColor = const Color(0xFF381483);
+  final accentColor = const Color(0xFFE96D71);
+  final accentBlue = const Color(0xFF2962FF);
+
   @override
   void initState() {
     super.initState();
     _cargarCitas();
   }
 
-  // --- LÓGICA INTACTA ---
   Future<void> _cargarCitas() async {
     setState(() => _isLoading = true);
     try {
       final citasCargadas = await _apiService.getCitasPorBarbero(widget.idUsuarioBarbero, "PENDIENTE");
-      setState(() {
-        _citas = citasCargadas;
-        _isLoading = false;
-      });
+      setState(() { _citas = citasCargadas; _isLoading = false; });
     } catch (e) {
       setState(() => _isLoading = false);
       _mostrarMensaje("Error al cargar citas: $e", Colors.red);
@@ -37,34 +37,86 @@ class _BarberRequestedAppointmentsScreenState extends State<BarberRequestedAppoi
   }
 
   void _botonAceptar(int idCita) async {
-    bool exito = await _apiService.aceptarCita(idCita);
-    if (exito) {
-      setState(() {
-        _citas.removeWhere((cita) => (cita['idCita'] ?? cita['id']) == idCita);
-      });
-      _mostrarMensaje("¡Cita aceptada con éxito!", Colors.green);
-    } else {
-      _mostrarMensaje("Error al aceptar la cita", Colors.red);
+    setState(() => _isLoading = true);
+    try {
+      bool exito = await _apiService.aceptarCita(idCita);
+      if (exito) {
+        _mostrarMensaje("¡Cita aceptada ✅!", Colors.green);
+        _cargarCitas();
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _mostrarMensaje(e.toString(), Colors.red);
     }
   }
 
   void _botonRechazar(int idCita) async {
-    bool exito = await _apiService.rechazarCita(idCita);
-    if (exito) {
-      setState(() {
-        _citas.removeWhere((cita) => (cita['idCita'] ?? cita['id']) == idCita);
-      });
-      _mostrarMensaje("Cita rechazada", Colors.orange);
-    } else {
-      _mostrarMensaje("Error al rechazar la cita", Colors.red);
+    setState(() => _isLoading = true);
+    try {
+      bool exito = await _apiService.rechazarCita(idCita);
+      if (exito) {
+        _mostrarMensaje("Cita rechazada ❌", Colors.orange);
+        _cargarCitas();
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _mostrarMensaje(e.toString(), Colors.red);
     }
   }
 
   void _mostrarMensaje(String texto, Color color) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto), backgroundColor: color));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(texto), backgroundColor: color, behavior: SnackBarBehavior.floating),
+    );
   }
-  // --- FIN LÓGICA INTACTA ---
+
+  // 🎨 CREADOR AUTOMÁTICO DE ETIQUETAS DE ESTADO
+  Widget _buildEstadoBadge(String estadoRaw) {
+    String estado = estadoRaw.toUpperCase();
+    Color bgColor;
+    Color textColor;
+
+    switch (estado) {
+      case 'PENDIENTE':
+        bgColor = Colors.orange.shade50;
+        textColor = Colors.orange.shade800;
+        break;
+      case 'ACEPTADA':
+        bgColor = Colors.blue.shade50;
+        textColor = Colors.blue.shade800;
+        break;
+      case 'COMPLETADA':
+        bgColor = Colors.green.shade50;
+        textColor = Colors.green.shade800;
+        break;
+      case 'RECHAZADA':
+      case 'CANCELADA':
+        bgColor = Colors.red.shade50;
+        textColor = Colors.red.shade800;
+        break;
+      case 'VENCIDA':
+        bgColor = Colors.grey.shade200;
+        textColor = Colors.grey.shade600;
+        break;
+      default:
+        bgColor = Colors.grey.shade100;
+        textColor = Colors.black54;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: textColor.withOpacity(0.3)),
+      ),
+      child: Text(
+          estado,
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textColor)
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,298 +124,290 @@ class _BarberRequestedAppointmentsScreenState extends State<BarberRequestedAppoi
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          // FONDO DEGRADADO UNIFICADO
-          gradient: RadialGradient(
-            center: Alignment(0.0, -0.8),
-            radius: 1.5,
-            colors: [
-              Color(0xFFE96D71), // Rosa/Rojo
-              Color(0xFF381483), // Morado oscuro
-            ],
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [mainColor, mainColor, const Color(0xFF1A0A3D)],
           ),
         ),
         child: SafeArea(
-          bottom: false, // Dejamos que el contenedor blanco baje hasta el final
           child: Column(
             children: [
-              // --- HEADER UNIFICADO (Flechita + Logo + Título) ---
+              // ── HEADER ──
               Padding(
-                padding: const EdgeInsets.only(top: 10.0, left: 20, right: 20, bottom: 20),
-                child: Column(
-                  children: [
-                    Stack(
-                      alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                child: Center(
+                  child: Container(
+                    width: 72, height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white24, width: 2),
+                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))],
+                    ),
+                    child: ClipOval(
+                      child: Image.asset('assets/logo.png', fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: Colors.white, child: Icon(Icons.content_cut, color: mainColor, size: 36)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const Text("Citas Solicitadas", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+              const SizedBox(height: 20),
+
+              // ── TARJETA PRINCIPAL ──
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F7FC),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 8))],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: Column(
                       children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: IconButton(
-                            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 24),
-                            onPressed: () => Navigator.pop(context),
+                        // Cabecera degradada
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF381483), Color(0xFF2962FF)],
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 50, height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white38, width: 1.5),
+                                ),
+                                child: const Icon(Icons.pending_actions_rounded, color: Colors.white, size: 26),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: const [
+                                    Text("Solicitudes pendientes", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+                                    SizedBox(height: 4),
+                                    Text("Acepta o rechaza cada cita", style: TextStyle(color: Colors.white60, fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                              // Badge contador
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF6B35).withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: const Color(0xFFFF6B35), width: 1),
+                                ),
+                                child: Text(
+                                  "${_citas.length}",
+                                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              boxShadow: const [
-                                BoxShadow(color: Colors.black38, blurRadius: 10, offset: Offset(0, 5))
-                              ],
-                              border: Border.all(color: Colors.white24, width: 2)
-                          ),
-                          child: ClipOval(
-                            child: Image.asset('assets/logo.png', fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Container(
-                                color: Colors.white,
-                                child: const Icon(Icons.content_cut, color: Color(0xFF381483), size: 40),
-                              ),
+
+                        // Lista
+                        Expanded(
+                          child: _isLoading
+                              ? Center(child: CircularProgressIndicator(color: mainColor))
+                              : _citas.isEmpty
+                              ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.inbox_outlined, size: 64, color: Colors.grey.shade300),
+                              const SizedBox(height: 12),
+                              Text("No hay solicitudes pendientes", style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                            ],
+                          )
+                              : RefreshIndicator(
+                            onRefresh: _cargarCitas,
+                            color: mainColor,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                              physics: const BouncingScrollPhysics(),
+                              itemCount: _citas.length,
+                              itemBuilder: (context, index) {
+                                final cita = _citas[index];
+                                final int idActual = cita['idCita'] ?? cita['id'];
+                                final String cliente = cita['clienteReserva']?['nombre'] ?? "Cliente";
+                                final String servicio = cita['servicioContratado']?['nombreServicio'] ?? "Servicio";
+                                final String estado = cita['estadoCita'] ?? "PENDIENTE";
+
+                                // 👇 Extracción inteligente del precio
+                                final double precioCalculado = cita['precioFinal'] != null
+                                    ? (cita['precioFinal'] as num).toDouble()
+                                    : (cita['servicioContratado']?['precioServicio'] ?? cita['servicioContratado']?['precio'] ?? 0).toDouble();
+                                final String precioStr = precioCalculado > 0 ? "${precioCalculado.toStringAsFixed(2)} €" : "---";
+
+                                String fechaFormateada = "Sin fecha";
+                                try {
+                                  final raw = cita['fechaHoraCita'] ?? "";
+                                  if (raw.isNotEmpty) {
+                                    final dt = DateTime.parse(raw);
+                                    fechaFormateada = "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} · ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+                                  }
+                                } catch (_) {}
+
+                                return _buildCitaCard(idActual, cliente, servicio, fechaFormateada, estado, precioStr);
+                              },
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 15),
-                    const Text(
-                      "Citas Solicitadas",
-                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                    ),
-                  ],
-                ),
-              ),
-
-              // --- CONTENEDOR PRINCIPAL BLANCO UNIFICADO ---
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(35),
-                      topRight: Radius.circular(35),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      // --- TARJETA DE CABECERA OSCURA UNIFICADA ---
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(25, 25, 25, 10),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                          decoration: BoxDecoration(
-                              color: const Color(0xFF2A0D68), // Morado oscuro
-                              borderRadius: BorderRadius.circular(15),
-                              boxShadow: const [
-                                BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 3))
-                              ]
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                "Solicitudes pendientes de confirmar",
-                                style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                    color: Colors.orange.shade400, // Naranja para indicar "Pendiente"
-                                    borderRadius: BorderRadius.circular(10)
-                                ),
-                                child: Text(
-                                  "${_citas.length}",
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // --- LISTA DE CITAS REDISEÑADA ---
-                      Expanded(
-                        child: _isLoading
-                            ? const Center(child: CircularProgressIndicator(color: Color(0xFF381483)))
-                            : _citas.isEmpty
-                            ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.inbox_outlined, size: 60, color: Colors.grey.shade300),
-                              const SizedBox(height: 10),
-                              Text("No tienes solicitudes pendientes", style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
-                            ],
-                          ),
-                        )
-                            : RefreshIndicator(
-                            onRefresh: _cargarCitas,
-                            color: const Color(0xFF381483),
-                            child: ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10),
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: _citas.length,
-                              itemBuilder: (context, index) {
-                                final cita = _citas[index];
-
-                                // LÓGICA DE EXTRACCIÓN
-                                final int idActual = cita['idCita'] ?? cita['id'];
-                                final cliente = cita['clienteReserva']?['nombre'] ?? "Cliente";
-                                final servicio = cita['servicioContratado']?['nombreServicio'] ?? cita['servicioContratado']?['nombre'] ?? "Corte (Estándar)";
-
-                                String fechaRaw = cita['fechaHoraCita'] ?? "";
-                                String fechaFormateada = "Sin fecha";
-                                try {
-                                  if (fechaRaw.isNotEmpty) {
-                                    DateTime dt = DateTime.parse(fechaRaw);
-                                    String dia = dt.day.toString().padLeft(2, '0');
-                                    String mes = dt.month.toString().padLeft(2, '0');
-                                    String anio = dt.year.toString();
-                                    String hora = dt.hour.toString().padLeft(2, '0');
-                                    String min = dt.minute.toString().padLeft(2, '0');
-                                    fechaFormateada = "$dia/$mes/$anio a las $hora:$min";
-                                  }
-                                } catch (e) {
-                                  fechaFormateada = fechaRaw;
-                                }
-
-                                // NUEVO DISEÑO DE LA TARJETA INTERIOR
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 15),
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                      color: Colors.grey.shade50,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: Colors.grey.shade200),
-                                      boxShadow: const [
-                                        BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
-                                      ]
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      // Información de la cita
-                                      Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          // Icono de perfil genérico
-                                          Container(
-                                            width: 50,
-                                            height: 50,
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF381483).withOpacity(0.1),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const Icon(Icons.person, color: Color(0xFF381483), size: 28),
-                                          ),
-                                          const SizedBox(width: 15),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(cliente, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                                                const SizedBox(height: 5),
-                                                Text(servicio, style: TextStyle(fontSize: 14, color: Colors.grey.shade700, fontWeight: FontWeight.w500)),
-                                                const SizedBox(height: 5),
-                                                Row(
-                                                  children: [
-                                                    Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade500),
-                                                    const SizedBox(width: 5),
-                                                    Text(fechaFormateada, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-
-                                      const SizedBox(height: 20),
-                                      const Divider(height: 1, color: Colors.black12),
-                                      const SizedBox(height: 20),
-
-                                      // Botones de acción rediseñados
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: OutlinedButton(
-                                              onPressed: () => _botonRechazar(idActual),
-                                              style: OutlinedButton.styleFrom(
-                                                  foregroundColor: Colors.red.shade600,
-                                                  side: BorderSide(color: Colors.red.shade200),
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                                  padding: const EdgeInsets.symmetric(vertical: 12)
-                                              ),
-                                              child: const Text("Rechazar", style: TextStyle(fontWeight: FontWeight.bold)),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 15),
-                                          Expanded(
-                                            child: ElevatedButton(
-                                              onPressed: () => _botonAceptar(idActual),
-                                              style: ElevatedButton.styleFrom(
-                                                  backgroundColor: const Color(0xFF2962FF), // Azul vibrante
-                                                  foregroundColor: Colors.white,
-                                                  elevation: 0,
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                                  padding: const EdgeInsets.symmetric(vertical: 12)
-                                              ),
-                                              child: const Text("Aceptar Cita", style: TextStyle(fontWeight: FontWeight.bold)),
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                    ],
-                                  ),
-                                );
-                              },
-                            )
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ),
 
-              // --- BARRA INFERIOR UNIFICADA ---
-              Container(
-                color: Colors.white,
+              const SizedBox(height: 12),
+
+              // ── NAV BAR ──
+              Padding(
+                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
                 child: Container(
-                  padding: const EdgeInsets.only(bottom: 15.0, top: 10),
-                  decoration: const BoxDecoration(
-                      color: Color(0xFF381483),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(25),
-                        topRight: Radius.circular(25),
-                      )
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: mainColor,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [BoxShadow(color: mainColor.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 6))],
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.home_outlined, color: Colors.white, size: 30),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      IconButton(
-                        // Icono activo porque estamos en citas
-                        icon: const Icon(Icons.calendar_month, color: Color(0xFF2962FF), size: 30),
-                        onPressed: () {},
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.account_balance_wallet_outlined, color: Colors.white, size: 30),
-                        onPressed: () {},
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.help_outline, color: Colors.white, size: 30),
-                        onPressed: () {},
-                      ),
+                      _buildNavItem(Icons.home_rounded, onTap: () => Navigator.pop(context)),
+                      _buildNavItem(Icons.calendar_month_rounded, active: true, onTap: () {}),
+                      _buildNavItem(Icons.settings_rounded, onTap: () {}),
                     ],
                   ),
                 ),
-              )
+              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCitaCard(int idCita, String cliente, String servicio, String fecha, String estado, String precio) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100, width: 1.5),
+        boxShadow: [BoxShadow(color: const Color(0xFFFF6B35).withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 3))],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: mainColor.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.person_rounded, color: mainColor, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(cliente, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black87)),
+                      const SizedBox(height: 2),
+                      Text(servicio, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                    ],
+                  ),
+                ),
+                // 👇 Etiqueta dinámica insertada aquí
+                _buildEstadoBadge(estado),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded, size: 13, color: Colors.grey.shade400),
+                    const SizedBox(width: 6),
+                    Text(fecha, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                  ],
+                ),
+                // 👇 El precio que verá el barbero para confirmar
+                Text(precio, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Divider(height: 1, color: Colors.grey.shade100),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _botonRechazar(idCita),
+                    icon: const Icon(Icons.close_rounded, size: 16),
+                    label: const Text("Rechazar", style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red.shade600,
+                      side: BorderSide(color: Colors.red.shade200),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _botonAceptar(idCita),
+                    icon: const Icon(Icons.check_rounded, size: 16),
+                    label: const Text("Aceptar", style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, {bool active = false, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: active ? Colors.white.withOpacity(0.18) : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: active ? Colors.white : Colors.white60, size: 26),
       ),
     );
   }

@@ -5,12 +5,18 @@ import 'services_client_screen.dart';
 class CalendarClientScreen extends StatefulWidget {
   final int barberiaId;
   final String barberiaNombre;
+  final String barberiaDireccion;
+  final String barberiaZona;
+  final String barberiaDescripcion;
   final int idCliente;
 
   const CalendarClientScreen({
     super.key,
     this.barberiaId = 1,
     this.barberiaNombre = "Barbería",
+    this.barberiaDireccion = "",
+    this.barberiaZona = "",
+    this.barberiaDescripcion = "",
     required this.idCliente,
   });
 
@@ -21,21 +27,43 @@ class CalendarClientScreen extends StatefulWidget {
 class _CalendarClientScreenState extends State<CalendarClientScreen> {
   DateTime _selectedDate = DateTime.now();
   String? _selectedTime;
-
   bool _isLoadingHours = false;
   List<String> _horasOcupadas = [];
 
   final ApiService _apiService = ApiService();
 
   final List<String> _todasLasHoras = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
-    "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30"
+    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+    "12:00", "12:30", "13:00", "13:30",
+    "16:00", "16:30", "17:00", "17:30", "18:00", "18:30",
+    "19:00", "19:30","20:00"
   ];
 
   @override
   void initState() {
     super.initState();
     _cargarHorasDisponibles(_selectedDate);
+  }
+
+  // Devuelve true si la hora debe mostrarse como disponible
+  bool _horaDisponible(String hora) {
+    // 1. Ocupada por el backend
+    if (_horasOcupadas.contains(hora)) return false;
+
+    // 2. Si es hoy, ocultamos las horas pasadas
+    final ahora = DateTime.now();
+    final esHoy = _selectedDate.year == ahora.year &&
+        _selectedDate.month == ahora.month &&
+        _selectedDate.day == ahora.day;
+
+    if (esHoy) {
+      final partes = hora.split(':');
+      final minSlot = int.parse(partes[0]) * 60 + int.parse(partes[1]);
+      final minAhora = ahora.hour * 60 + ahora.minute;
+      if (minSlot <= minAhora) return false;
+    }
+
+    return true;
   }
 
   Future<void> _cargarHorasDisponibles(DateTime fecha) async {
@@ -45,11 +73,11 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
     });
 
     try {
-      String mes = fecha.month.toString().padLeft(2, '0');
-      String dia = fecha.day.toString().padLeft(2, '0');
-      String fechaFormateada = "${fecha.year}-$mes-$dia";
+      final mes = fecha.month.toString().padLeft(2, '0');
+      final dia = fecha.day.toString().padLeft(2, '0');
+      final fechaFormateada = "${fecha.year}-$mes-$dia";
 
-      List<String> horasOcupadasBackend = await _apiService.getHorasOcupadas(widget.barberiaId, fechaFormateada);
+      final horasOcupadasBackend = await _apiService.getHorasOcupadas(widget.barberiaId, fechaFormateada);
 
       setState(() {
         _horasOcupadas = horasOcupadasBackend;
@@ -66,8 +94,9 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final horasDisponibles = _todasLasHoras.where(_horaDisponible).toList();
+
     return Scaffold(
-      // Ya no extendemos el body porque no hay barra flotante inferior
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -75,16 +104,13 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
           gradient: RadialGradient(
             center: Alignment(0.0, -0.8),
             radius: 1.5,
-            colors: [
-              Color(0xFFE96D71),
-              Color(0xFF381483),
-            ],
+            colors: [Color(0xFFE96D71), Color(0xFF381483)],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // --- HEADER LIMPIO ---
+              // ── HEADER ──
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                 child: Center(
@@ -92,10 +118,8 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                     width: 65,
                     height: 65,
                     decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(color: Colors.black38, blurRadius: 10, offset: Offset(0, 5))
-                        ]
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: Colors.black38, blurRadius: 10, offset: Offset(0, 5))],
                     ),
                     child: ClipOval(
                       child: Image.asset('assets/logo.png', fit: BoxFit.cover),
@@ -106,22 +130,20 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
 
               const SizedBox(height: 10),
 
-              // --- CONTENIDO ESCROLABLE ---
+              // ── CONTENIDO SCROLLABLE ──
               Expanded(
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   child: Column(
                     children: [
-                      // --- CALENDARIO ---
+                      // ── CALENDARIO ──
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 25.0),
                         child: Container(
                           decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(15),
-                              boxShadow: const [
-                                BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 5))
-                              ]
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 5))],
                           ),
                           child: Theme(
                             data: ThemeData.light().copyWith(
@@ -136,9 +158,7 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                               firstDate: DateTime.now(),
                               lastDate: DateTime.now().add(const Duration(days: 365)),
                               onDateChanged: (DateTime newDate) {
-                                setState(() {
-                                  _selectedDate = newDate;
-                                });
+                                setState(() => _selectedDate = newDate);
                                 _cargarHorasDisponibles(newDate);
                               },
                             ),
@@ -148,40 +168,54 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
 
                       const SizedBox(height: 20),
 
-                      // --- SECCIÓN DE HORAS DISPONIBLES ---
+                      // ── HORAS DISPONIBLES ──
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 25.0),
                         child: Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(15),
-                              boxShadow: const [
-                                BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 5))
-                              ]
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 5))],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text("Horas disponibles", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              const Text(
+                                "Horas disponibles",
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
                               const SizedBox(height: 15),
 
                               if (_isLoadingHours)
                                 const Center(child: CircularProgressIndicator(color: Colors.black))
+                              else if (horasDisponibles.isEmpty)
+                              // Sin horas disponibles (ocupadas + pasadas)
+                                Column(
+                                  children: [
+                                    Icon(Icons.event_busy_rounded, size: 40, color: Colors.grey.shade300),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      "No hay horas disponibles para este día.",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(color: Colors.redAccent, fontSize: 14),
+                                    ),
+                                  ],
+                                )
                               else
                                 Wrap(
                                   spacing: 10,
                                   runSpacing: 10,
-                                  children: _todasLasHoras.where((hora) => !_horasOcupadas.contains(hora)).map((hora) {
-                                    bool isSelected = _selectedTime == hora;
+                                  children: horasDisponibles.map((hora) {
+                                    final isSelected = _selectedTime == hora;
                                     return ChoiceChip(
                                       label: Text(
-                                          hora,
-                                          style: TextStyle(
-                                              color: isSelected ? Colors.white : Colors.black87,
-                                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal
-                                          )
+                                        hora,
+                                        style: TextStyle(
+                                          color: isSelected ? Colors.white : Colors.black87,
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        ),
                                       ),
                                       selected: isSelected,
                                       selectedColor: Colors.blueAccent.shade700,
@@ -189,74 +223,67 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                                       showCheckmark: false,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                       onSelected: (bool selected) {
-                                        setState(() {
-                                          _selectedTime = selected ? hora : null;
-                                        });
+                                        setState(() => _selectedTime = selected ? hora : null);
                                       },
                                     );
                                   }).toList(),
                                 ),
-
-                              if (!_isLoadingHours && _todasLasHoras.every((h) => _horasOcupadas.contains(h)))
-                                const Text("Lo sentimos, no hay citas disponibles para este día.", style: TextStyle(color: Colors.redAccent)),
                             ],
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: 30), // Un poco de aire al final del scroll
+                      const SizedBox(height: 30),
                     ],
                   ),
                 ),
               ),
 
-              // --- BOTONES INFERIORES DE ACCIÓN ---
+              // ── BOTONES INFERIORES ──
               Padding(
-                // Ajustamos el padding para que quede bien posicionado al final de la pantalla
                 padding: const EdgeInsets.only(left: 25.0, right: 25.0, top: 15.0, bottom: 30.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // --- BOTÓN ATRÁS (Blanco brillante para destacar sobre morado) ---
+                    // Botón atrás
                     Container(
                       decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            )
-                          ]
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF381483), size: 28), // Flecha morada
+                        icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF381483), size: 28),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ),
 
-                    // --- BOTÓN CONTINUAR (Coral brillante cuando activo) ---
+                    // Botón continuar
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-
-                        backgroundColor: _selectedTime != null ? const Color(0xFF381483) : Colors.white.withOpacity(0.2),
+                        backgroundColor: _selectedTime != null
+                            ? const Color(0xFF381483)
+                            : Colors.white.withOpacity(0.2),
                         foregroundColor: Colors.white,
                         elevation: _selectedTime != null ? 8 : 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 15),
                       ),
-                      onPressed: _selectedTime == null ? null : () {
+                      onPressed: _selectedTime == null
+                          ? null
+                          : () {
                         final fechaSola = "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}";
-                        final horaSola = _selectedTime!;
-
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => ServicesClientScreen(
                               barberiaId: widget.barberiaId,
+                              barberiaNombre: widget.barberiaNombre,
+                              barberiaDireccion: widget.barberiaDireccion,
+                              barberiaZona: widget.barberiaZona,
+                              barberiaDescripcion: widget.barberiaDescripcion,
                               fecha: fechaSola,
-                              hora: horaSola,
+                              hora: _selectedTime!,
                               idCliente: widget.idCliente,
                             ),
                           ),
@@ -265,13 +292,12 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                       child: Row(
                         children: [
                           Text(
-                              "Continuar",
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                // El texto se atenúa si el botón está desactivado
-                                color: _selectedTime != null ? Colors.white : Colors.white54,
-                              )
+                            "Continuar",
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: _selectedTime != null ? Colors.white : Colors.white54,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Icon(

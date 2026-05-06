@@ -4,7 +4,10 @@ import '../models/cita_request.dart';
 
 class ServicesClientScreen extends StatefulWidget {
   final int barberiaId;
-  final String barberiaNombre; // <-- AÑADIDO PARA MOSTRAR EL NOMBRE
+  final String barberiaNombre;
+  final String barberiaDireccion; // <-- ¡NUEVO!
+  final String barberiaZona;      // <-- ¡NUEVO!
+  final String barberiaDescripcion; // <-- ¡NUEVO!
   final String fecha;
   final String hora;
   final int idCliente;
@@ -12,7 +15,10 @@ class ServicesClientScreen extends StatefulWidget {
   const ServicesClientScreen({
     super.key,
     required this.barberiaId,
-    this.barberiaNombre = "La Rodola Barber", // Nombre por defecto si no se pasa
+    required this.barberiaNombre,
+    this.barberiaDireccion = "Dirección no disponible", // Por si viene vacío
+    this.barberiaZona = "",
+    this.barberiaDescripcion = "Barbería Clásica",
     required this.fecha,
     required this.hora,
     required this.idCliente,
@@ -33,27 +39,19 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
     _cargarServicios();
   }
 
-  // =======================================================
-  // --- LÓGICA INTACTA ---
-  // =======================================================
   Future<void> _cargarServicios() async {
     try {
-      final data = await _apiService.getServicios();
+      // ⚠️ Cambiaremos esto en api_service cuando Iván confirme la ruta
+      // De momento imaginemos que ya existe getServiciosPorBarberia
+      final data = await _apiService.getServiciosPorBarberia(widget.barberiaId);
       setState(() {
         _servicios = data;
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar catálogo: $e'),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      // Silenciamos el error temporalmente si no existe la ruta aún
+      print('Error al cargar catálogo de esta barbería: $e');
     }
   }
 
@@ -72,14 +70,14 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
 
       DateTime fechaHoraSeleccionada = DateTime(anio, mes, dia, hora, min);
 
+      // ¡AQUÍ CREAMOS LA RESERVA EXACTAMENTE COMO PIDE IVÁN!
       final reserva = CitaRequest(
-        idCliente: widget.idCliente,
-        emailCliente: "rubiomurilloivan@gmail.com",
-        idBarbero: widget.barberiaId,
+        idBarberia: widget.barberiaId,
         idServicio: idServicio,
         fechaHora: fechaHoraSeleccionada,
       );
 
+      // La enviamos al servidor
       await _apiService.reservarCita(reserva);
 
       if (mounted) {
@@ -93,10 +91,11 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
         Navigator.popUntil(context, (route) => route.isFirst);
       }
     } catch (e) {
+      String mensajeLimpio = e.toString().replaceAll('Exception: ', '');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Fallo al reservar: $e'),
+            content: Text(mensajeLimpio),
             backgroundColor: Colors.redAccent,
             behavior: SnackBarBehavior.floating,
           ),
@@ -133,7 +132,7 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
                 height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF381483), // Color corporativo
+                    backgroundColor: const Color(0xFF381483),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                   ),
                   onPressed: () {
@@ -150,26 +149,19 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
       },
     );
   }
-  // =======================================================
 
-
-  // =======================================================
-  // --- NUEVA INTERFAZ (Estilo captura de pantalla) ---
-  // =======================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Fondo limpio como en la captura
+      backgroundColor: Colors.white,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // --- HEADER CON IMAGEN Y BOTONES FLOTANTES ---
           SliverAppBar(
             expandedHeight: 250.0,
             pinned: true,
             backgroundColor: const Color(0xFF381483),
             elevation: 0,
-            // Botón Atrás
             leading: Padding(
               padding: const EdgeInsets.only(left: 10.0, top: 8.0, bottom: 8.0),
               child: Container(
@@ -180,7 +172,6 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
                 ),
               ),
             ),
-            // Botones de la derecha (Compartir y Favorito)
             actions: [
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -188,7 +179,7 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
                   decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
                   child: IconButton(
                     icon: const Icon(Icons.ios_share, color: Colors.black87, size: 20),
-                    onPressed: () {}, // Funcionalidad futura
+                    onPressed: () {},
                   ),
                 ),
               ),
@@ -199,12 +190,11 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
                   decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
                   child: IconButton(
                     icon: const Icon(Icons.favorite_border, color: Colors.black87, size: 20),
-                    onPressed: () {}, // Funcionalidad futura
+                    onPressed: () {},
                   ),
                 ),
               ),
             ],
-            // Imagen de fondo
             flexibleSpace: FlexibleSpaceBar(
               background: Image.network(
                 "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=500&auto=format&fit=crop&q=60",
@@ -213,33 +203,30 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
             ),
           ),
 
-          // --- INFORMACIÓN DE LA BARBERÍA Y TABS ---
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Nombre y dirección
+                  // --- AHORA USAMOS LAS VARIABLES DEL CONSTRUCTOR ---
                   Text(widget.barberiaNombre, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
                   const SizedBox(height: 5),
-                  Text("C. Mérida Centro, 40, 06800, Mérida", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                  Text("${widget.barberiaDireccion}, ${widget.barberiaZona}", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
                   const SizedBox(height: 12),
 
-                  // Estrellas
                   Row(
                     children: [
                       const Icon(Icons.star, color: Colors.black87, size: 16),
                       const SizedBox(width: 4),
-                      const Text("5,0", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      Text(" (29 reseñas)", style: TextStyle(color: const Color(0xFFE96D71), fontSize: 14, fontWeight: FontWeight.w500)),
+                      const Text("5,0", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)), // Esto también lo podríamos pasar dinámico si el backend lo da
+                      Text(" (Reseñas próximamente)", style: TextStyle(color: const Color(0xFFE96D71), fontSize: 14, fontWeight: FontWeight.w500)),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text("Barbería Clásica", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                  Text(widget.barberiaDescripcion, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
                   const SizedBox(height: 25),
 
-                  // Tabs (Simulados para el diseño)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -252,11 +239,10 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
                   Divider(height: 1, thickness: 1, color: Colors.grey.shade300),
                   const SizedBox(height: 25),
 
-                  // Título de la lista
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text("Servicios más populares", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                      const Text("Servicios de este local", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
                       Icon(Icons.keyboard_arrow_up, color: Colors.grey.shade500),
                     ],
                   ),
@@ -266,7 +252,6 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
             ),
           ),
 
-          // --- LISTA DE SERVICIOS (Dinámica desde tu API) ---
           if (_isLoading)
             const SliverToBoxAdapter(
               child: Padding(
@@ -278,7 +263,7 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(40.0),
-                child: Center(child: Text("No hay servicios disponibles en este momento", style: TextStyle(color: Colors.grey.shade600))),
+                child: Center(child: Text("No hay servicios disponibles en este local", style: TextStyle(color: Colors.grey.shade600))),
               ),
             )
           else
@@ -287,19 +272,18 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
                     (context, index) {
                   final servicio = _servicios[index];
 
-                  // Extracción intacta de tus datos
                   final int id = servicio['idServicio'];
                   final String nombre = servicio['nombreServicio'] ?? 'Corte';
                   final double precioNum = servicio['precioServicio'] is num
                       ? (servicio['precioServicio'] as num).toDouble()
                       : 0.0;
                   final String precioStr = "${precioNum.toStringAsFixed(2)} €";
-                  const String duracion = "30 min";
+                  const String duracion = "30 min"; // Lo dejamos fijo hasta que Iván añada duración a los servicios
 
                   return Column(
                     children: [
                       _buildServiceItem(id, nombre, precioStr, duracion),
-                      if (index < _servicios.length - 1) // Línea divisoria excepto en el último
+                      if (index < _servicios.length - 1)
                         Divider(height: 1, thickness: 1, color: Colors.grey.shade100, indent: 20, endIndent: 20),
                     ],
                   );
@@ -308,14 +292,12 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
               ),
             ),
 
-          // Espacio al final para que no quede pegado abajo
           const SliverToBoxAdapter(child: SizedBox(height: 50)),
         ],
       ),
     );
   }
 
-  // --- WIDGET PARA LAS TABS ---
   Widget _buildTab(String title, bool isActive) {
     return Column(
       children: [
@@ -328,7 +310,6 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        // Subrayado para la tab activa
         Container(
           height: 3,
           width: 40,
@@ -341,14 +322,12 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
     );
   }
 
-  // --- WIDGET PARA CADA ITEM DE LA LISTA ---
   Widget _buildServiceItem(int id, String nombre, String precio, String duracion) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Nombre del servicio
           Expanded(
             child: Text(
               nombre,
@@ -357,8 +336,6 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-
-          // Precio y Duración
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -367,13 +344,10 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
               Text(duracion, style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
             ],
           ),
-
           const SizedBox(width: 15),
-
-          // Botón Reservar (Con tu color corporativo)
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF381483), // Tu morado en lugar del azul de la foto
+              backgroundColor: const Color(0xFF381483),
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

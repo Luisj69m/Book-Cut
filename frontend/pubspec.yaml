@@ -36,7 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.5
   image_picker: ^1.0.4
-
+  supabase_flutter: ^2.12.4
+  fl_chart: ^0.70.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

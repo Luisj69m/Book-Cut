@@ -17,12 +17,27 @@ class HomeClientScreen extends StatefulWidget {
 class _HomeClientScreenState extends State<HomeClientScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ApiService _apiService = ApiService();
+
   String? _fotoUrlServidor;
+
+  // VARIABLES PARA LAS BARBERÍAS REALES
+  List<dynamic> _barberias = [];
+  bool _isLoadingBarberias = true;
+
+  // NUESTRA PISCINA DE FOTOS PREMIUM DE BARBERÍAS
+  final List<String> _fotosAleatorias = [
+    "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=500&auto=format&fit=crop&q=60",
+    "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=500&auto=format&fit=crop&q=60",
+    "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=500&auto=format&fit=crop&q=60",
+    "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=500&auto=format&fit=crop&q=60",
+    "https://images.unsplash.com/photo-1512496015851-a1fbaf692a9f?w=500&auto=format&fit=crop&q=60"
+  ];
 
   @override
   void initState() {
     super.initState();
     _cargarFotoPerfil();
+    _cargarBarberias(); // <-- Llamamos a la API al abrir la pantalla
   }
 
   Future<void> _cargarFotoPerfil() async {
@@ -39,6 +54,25 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     }
   }
 
+  // --- CARGA REAL DESDE EL BACKEND ---
+  Future<void> _cargarBarberias() async {
+    setState(() => _isLoadingBarberias = true);
+    try {
+      final datos = await _apiService.getTodasLasBarberias();
+      if (mounted) {
+        setState(() {
+          _barberias = datos;
+          _isLoadingBarberias = false;
+        });
+      }
+    } catch (e) {
+      print("Error obteniendo barberías: $e");
+      if (mounted) {
+        setState(() => _isLoadingBarberias = false);
+      }
+    }
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -49,17 +83,13 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      // 👇 ESTO ES CLAVE: Permite que el fondo blanco fluya POR DEBAJO de la barra flotante
       extendBody: true,
-
-      // 👇 NUEVA BARRA DE NAVEGACIÓN FLOTANTE
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.only(left: 20, right: 20, bottom: 15),
           child: _buildFloatingNavBar(context, activeIndex: 0),
         ),
       ),
-
       body: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
@@ -72,12 +102,11 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
             ],
           ),
         ),
-        // Desactivamos el bottom del SafeArea para que el blanco llegue hasta el final de la pantalla
         child: SafeArea(
           bottom: false,
           child: Column(
             children: [
-              // --- HEADER LIMPIO (SOLO LOGO) ---
+              // --- HEADER LIMPIO ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                 child: Center(
@@ -182,29 +211,58 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                         ),
                       ),
 
+                      // --- LISTA DINÁMICA DE BARBERÍAS ---
                       Expanded(
-                        child: ListView(
-                          // 👇 Le damos bastante padding abajo para que la última tarjeta no quede tapada por la barra flotante
-                          padding: const EdgeInsets.only(top: 5, bottom: 100),
-                          physics: const BouncingScrollPhysics(),
-                          children: [
-                            _buildBarberiaCard(
-                                1,
-                                "La Rodola",
-                                "Mérida, Centro",
-                                "Lunes - Sábado",
-                                "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=500&auto=format&fit=crop&q=60",
-                                5.0
-                            ),
-                            _buildBarberiaCard(
-                                2,
-                                "Peine Jr",
-                                "Mérida, Nueva Ciudad",
-                                "Lunes - Sábado",
-                                "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=500&auto=format&fit=crop&q=60",
-                                4.8
-                            ),
-                          ],
+                        child: _isLoadingBarberias
+                            ? const Center(child: CircularProgressIndicator(color: Color(0xFF381483)))
+                            : _barberias.isEmpty
+                            ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.storefront_outlined, size: 60, color: Colors.grey.shade300),
+                              const SizedBox(height: 10),
+                              Text("Aún no hay barberías registradas", style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                            ],
+                          ),
+                        )
+                            : RefreshIndicator(
+                          onRefresh: _cargarBarberias,
+                          color: const Color(0xFF381483),
+                          child: ListView.builder(
+                            padding: const EdgeInsets.only(top: 5, bottom: 100),
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: _barberias.length,
+                            itemBuilder: (context, index) {
+                              final barberia = _barberias[index];
+
+                              // Extraemos los datos exactos que manda Iván
+                              final int id = barberia['id'] ?? barberia['idBarberia'] ?? 0;
+                              final String nombre = barberia['nombre'] ?? 'Sin nombre';
+                              final String ubicacion = barberia['zona'] ?? barberia['direccion'] ?? 'Ubicación desconocida';
+                              final String horario = barberia['horario'] ?? 'Sin horario';
+
+                              // 👇 MAGIA: Rescatamos la dirección completa, la zona y la descripción
+                              final String direccionFina = barberia['direccionCompleta'] ?? barberia['direccion'] ?? "Dirección no disponible";
+                              final String zonaFina = barberia['zona'] ?? "";
+                              final String descripcionFina = barberia['descripcion'] ?? "Barbería Clásica";
+
+                              // Elegimos la foto basada en el ID para que siempre sea la misma para ese local
+                              final String imageUrl = _fotosAleatorias[id % _fotosAleatorias.length];
+
+                              return _buildBarberiaCard(
+                                  id,
+                                  nombre,
+                                  ubicacion,
+                                  horario,
+                                  imageUrl,
+                                  4.9, // Nota: Estrellas hardcodeadas hasta que haya reseñas
+                                  direccionFina,  // <-- Pasamos los datos extra a la tarjeta
+                                  zonaFina,       // <--
+                                  descripcionFina // <--
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ],
@@ -218,8 +276,8 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     );
   }
 
-  // --- TARJETA DE BARBERÍA ---
-  Widget _buildBarberiaCard(int id, String nombre, String ubicacion, String horario, String imageUrl, double rating) {
+  // --- TARJETA DE BARBERÍA ACTUALIZADA PARA PASAR LOS DATOS ---
+  Widget _buildBarberiaCard(int id, String nombre, String ubicacion, String horario, String imageUrl, double rating, String direccion, String zona, String descripcion) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
@@ -248,6 +306,10 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                 builder: (context) => CalendarClientScreen(
                   barberiaId: id,
                   barberiaNombre: nombre,
+                  // 👇 AQUÍ ESTÁ EL ORIGEN DE LA TUBERÍA
+                  barberiaDireccion: direccion,
+                  barberiaZona: zona,
+                  barberiaDescripcion: descripcion,
                   idCliente: widget.idUsuarioCliente,
                 ),
               ),
@@ -309,12 +371,16 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Icon(Icons.access_time_rounded, color: Colors.grey.shade500, size: 14),
-                              const SizedBox(width: 4),
-                              Text(horario, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-                            ],
+                          Flexible(
+                            flex: 0,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                                const SizedBox(width: 4),
+                                Text(rating.toString(), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -344,13 +410,13 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     );
   }
 
-  // --- NUEVA BARRA FLOTANTE (ESTILO PÍLDORA) ---
+  // --- NUEVA BARRA FLOTANTE INTACTA ---
   Widget _buildFloatingNavBar(BuildContext context, {required int activeIndex}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
-          color: const Color(0xFF381483), // El morado oscuro de tu app
-          borderRadius: BorderRadius.circular(40), // Bordes súper redondeados
+          color: const Color(0xFF381483),
+          borderRadius: BorderRadius.circular(40),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF381483).withOpacity(0.3),
@@ -363,25 +429,18 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          // 0. HOME
           _buildNavItem(Icons.home_rounded, 0, activeIndex, () {}),
-
-          // 1. CITAS
           _buildNavItem(Icons.receipt_long_rounded, 1, activeIndex, () {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => AppointmentsScreen(idUsuarioCliente: widget.idUsuarioCliente,)),
             );
           }),
-
-          // 2. PERFIL (Tu foto dinámica)
           _buildProfileNavItem(2, activeIndex),
-
-          // 3. AJUSTES
           _buildNavItem(Icons.settings_rounded, 3, activeIndex, () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              MaterialPageRoute(builder: (context) => SettingsScreen(idCliente: widget.idUsuarioCliente)),
             );
           }),
         ],
@@ -389,7 +448,6 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     );
   }
 
-  // --- WIDGET PARA LOS ICONOS NORMALES (CON ANIMACIÓN) ---
   Widget _buildNavItem(IconData icon, int index, int activeIndex, VoidCallback onTap) {
     final isActive = index == activeIndex;
     return GestureDetector(
@@ -398,7 +456,6 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          // Si está seleccionado, le ponemos un fondo blanco translúcido
           color: isActive ? Colors.white.withOpacity(0.15) : Colors.transparent,
           shape: BoxShape.circle,
         ),
@@ -411,7 +468,6 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     );
   }
 
-  // --- WIDGET PARA LA FOTO DE PERFIL (CON ANIMACIÓN) ---
   Widget _buildProfileNavItem(int index, int activeIndex) {
     final isActive = index == activeIndex;
     return GestureDetector(
@@ -420,12 +476,12 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
           context,
           MaterialPageRoute(builder: (context) => const ProfileClientScreen()),
         ).then((_) {
-          _cargarFotoPerfil(); // Recarga la foto al volver
+          _cargarFotoPerfil();
         });
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.all(4), // Actúa como el anillo de selección
+        padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: isActive ? Colors.white.withOpacity(0.15) : Colors.transparent,
           shape: BoxShape.circle,
