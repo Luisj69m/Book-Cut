@@ -198,6 +198,10 @@ public class CitaService {
         servicioDto.setDuracionMinutos(cita.getServicioContratado().getDuracionMinutos());
 
         dto.setServicioContratado(servicioDto);
+
+        if (cita.getBarberoAsignado() != null && cita.getBarberoAsignado().getBarberiaAsignada() != null) {
+            dto.setNombreBarberia(cita.getBarberoAsignado().getBarberiaAsignada().getNombre());
+        }
         return dto;
     }
 

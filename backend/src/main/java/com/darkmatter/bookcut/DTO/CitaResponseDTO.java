@@ -8,6 +8,7 @@ public class CitaResponseDTO {
     private LocalDateTime fechaHoraCita;
     private EstadoCita estadoCita;
     private ServicioDTO servicioContratado; // Aquí va el precio y duración
+    private String nombreBarberia;
 
     // Getters y Setters
     public Long getIdCita() { return idCita; }
@@ -18,4 +19,7 @@ public class CitaResponseDTO {
     public void setEstadoCita(EstadoCita estadoCita) { this.estadoCita = estadoCita; }
     public ServicioDTO getServicioContratado() { return servicioContratado; }
     public void setServicioContratado(ServicioDTO servicioContratado) { this.servicioContratado = servicioContratado; }
+    public String getNombreBarberia() { return nombreBarberia; }
+    public void setNombreBarberia(String nombreBarberia) { this.nombreBarberia = nombreBarberia; }
+
 }
