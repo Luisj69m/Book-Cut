@@ -30,16 +30,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     setState(() => _isLoading = true);
 
-    // Llamamos al ApiService que creamos antes
-    bool exito = await _apiService.solicitarRecuperacion(email);
+    try {
+      // Intentamos llamar al ApiService
+      bool exito = await _apiService.solicitarRecuperacion(email);
 
-    setState(() => _isLoading = false);
-
-    if (exito) {
-      _mostrarSnackBar("Código enviado. Revisa la bandeja de entrada del correo.", Colors.green);
-      setState(() => _currentStep = 2); // Pasamos al siguiente formulario
-    } else {
-      _mostrarSnackBar("Error al solicitar el código. Verifica el correo.", Colors.red);
+      if (exito) {
+        _mostrarSnackBar("Código enviado. Revisa la bandeja de entrada del correo.", Colors.green);
+        setState(() => _currentStep = 2); // Pasamos al siguiente formulario
+      }
+    } catch (e) {
+      // 🛡️ Si el ApiService lanza un error (como el 403 de Iván), cae aquí
+      _mostrarSnackBar(e.toString().replaceAll('Exception: ', ''), Colors.red);
+    } finally {
+      // 🛑 ESTO ES LO IMPORTANTE: Se ejecuta SIEMPRE, apagando la ruedita
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -101,7 +107,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       onPressed: () => Navigator.pop(context),
                     ),
                     const Expanded(
-                      child: Text("Recuperar Cuenta", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                      child: Text("Reestablecimiento de contraseña ", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(width: 40), // Balance visual
                   ],

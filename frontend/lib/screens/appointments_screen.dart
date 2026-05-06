@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-// 👇 Asegúrate de que las rutas a estos archivos sean correctas en tu proyecto
 import 'package:frontend/utils/api_config.dart';
 import 'profile_client_screen.dart';
 import 'settings_screen.dart';
@@ -70,6 +69,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
       for (var cita in todasLasCitas) {
         String estado = (cita['estadoCita'] ?? "").toString().toUpperCase();
 
+        // Si está pendiente o aceptada, a próximas. El resto (Completadas, Canceladas, Rechazadas y VENCIDAS) al historial.
         if (estado == 'PENDIENTE' || estado == 'ACEPTADA') {
           proximas.add(cita);
         } else {
@@ -199,21 +199,64 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
     }
   }
 
+  // 🎨 CREADOR AUTOMÁTICO DE ETIQUETAS DE ESTADO (Integrado para VENCIDA y demás)
+  Widget _buildEstadoBadge(String estadoRaw) {
+    String estado = estadoRaw.toUpperCase();
+    Color bgColor;
+    Color textColor;
+
+    switch (estado) {
+      case 'PENDIENTE':
+        bgColor = Colors.orange.shade50;
+        textColor = Colors.orange.shade800;
+        break;
+      case 'ACEPTADA':
+        bgColor = Colors.blue.shade50;
+        textColor = Colors.blue.shade800;
+        break;
+      case 'COMPLETADA':
+        bgColor = Colors.green.shade50;
+        textColor = Colors.green.shade800;
+        break;
+      case 'RECHAZADA':
+      case 'CANCELADA':
+        bgColor = Colors.red.shade50;
+        textColor = Colors.red.shade800;
+        break;
+      case 'VENCIDA': // 💀 EL NUEVO ESTADO DE IVÁN
+        bgColor = Colors.grey.shade200;
+        textColor = Colors.grey.shade600;
+        break;
+      default:
+        bgColor = Colors.grey.shade100;
+        textColor = Colors.black54;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: textColor.withOpacity(0.3)),
+      ),
+      child: Text(
+          estado,
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textColor)
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgDarkPurple,
-      // 👇 Clave para que el contenedor blanco baje hasta el fondo de la pantalla
       extendBody: true,
-
-      // 👇 La nueva barra de navegación flotante
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.only(left: 20, right: 20, bottom: 15),
-          child: _buildFloatingNavBar(context, activeIndex: 1), // Índice 1 = Citas
+          child: _buildFloatingNavBar(context, activeIndex: 1),
         ),
       ),
-
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -228,7 +271,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
           bottom: false,
           child: Column(
             children: [
-              // Header
               Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Row(
@@ -243,7 +285,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
                 ),
               ),
 
-              // TabBar
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0),
                 child: TabBar(
@@ -258,7 +299,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
 
               const SizedBox(height: 10),
 
-              // Contenido (Contenedor blanco)
               Expanded(
                 child: Container(
                   width: double.infinity,
@@ -280,7 +320,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
                   ),
                 ),
               ),
-              // Eliminado el bottomNavBar de aquí, ahora está en el Scaffold
             ],
           ),
         ),
@@ -298,7 +337,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
       onRefresh: _cargarMisCitas,
       color: const Color(0xFF381483),
       child: ListView.builder(
-        // 👇 Añadido un padding bottom de 110 para que la última tarjeta no quede bajo la barra flotante
         padding: const EdgeInsets.only(top: 25.0, left: 25.0, right: 25.0, bottom: 110.0),
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: citas.length,
@@ -310,7 +348,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
               cita['servicioContratado']?['nombre'] ??
               "Corte";
 
-          final precio = cita['servicioContratado']?['precio']?.toString() ?? "---";
+          // 👇 LÓGICA INTELIGENTE DEL PRECIO (Prioriza el precioFinal de Iván)
+          final double precioCalculado = cita['precioFinal'] != null
+              ? (cita['precioFinal'] as num).toDouble()
+              : (cita['servicioContratado']?['precioServicio'] ?? cita['servicioContratado']?['precio'] ?? 0).toDouble();
+
+          final String precioStr = precioCalculado > 0 ? "${precioCalculado.toStringAsFixed(2)}" : "---";
 
           final duracion = cita['servicioContratado']?['duracionMinutos']?.toString() ??
               cita['servicioContratado']?['duracion']?.toString() ??
@@ -322,7 +365,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
           if (esHistorial) {
             return _buildHistoryAppointmentCard(
               serviceName: servicio,
-              price: "$precio €",
+              price: "$precioStr €",
               duration: "$duracion min",
               month: fechaMap['mes']!,
               day: fechaMap['dia']!,
@@ -355,8 +398,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
     required String status,
     required VoidCallback onCancel,
   }) {
-    bool isAccepted = status == 'ACEPTADA';
-
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(15),
@@ -386,20 +427,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    if (isAccepted)
-                      Row(
-                        children: [
-                          Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
-                          const SizedBox(width: 4),
-                          Text("Confirmada", style: TextStyle(fontSize: 13, color: Colors.green.shade700, fontWeight: FontWeight.bold)),
-                        ],
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(8)),
-                        child: Text("Pendiente", style: TextStyle(fontSize: 12, color: Colors.orange.shade900, fontWeight: FontWeight.bold)),
-                      ),
+                    // 👇 Aquí hemos insertado la etiqueta automática
+                    _buildEstadoBadge(status),
                     const Spacer(),
                     TextButton(
                       style: TextButton.styleFrom(foregroundColor: Colors.red.shade700, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
@@ -444,13 +473,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
     required String time,
     required String status,
   }) {
-    bool isCancelled = status == "CANCELADA" || status == "RECHAZADA";
+    bool isCancelledOrExpired = status == "CANCELADA" || status == "RECHAZADA" || status == "VENCIDA";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-          color: isCancelled ? Colors.grey.shade200 : Colors.grey.shade100,
+          color: isCancelledOrExpired ? Colors.grey.shade200 : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(15),
           boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 3, offset: Offset(0, 2))]
       ),
@@ -465,14 +494,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Text(serviceName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isCancelled ? Colors.grey.shade600 : Colors.black)),
+                      child: Text(serviceName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isCancelledOrExpired ? Colors.grey.shade600 : Colors.black)),
                     ),
                     const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: isCancelled ? Colors.red.shade100 : Colors.grey.shade300, borderRadius: BorderRadius.circular(8)),
-                      child: Text(status, style: TextStyle(fontSize: 10, color: isCancelled ? Colors.red.shade900 : Colors.grey.shade800, fontWeight: FontWeight.bold)),
-                    ),
+                    // 👇 Aquí hemos insertado la etiqueta automática
+                    _buildEstadoBadge(status),
                   ],
                 ),
                 const SizedBox(height: 5),
@@ -486,14 +512,14 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
           Expanded(
             flex: 4,
             child: Opacity(
-              opacity: isCancelled ? 0.6 : 1,
+              opacity: isCancelledOrExpired ? 0.6 : 1,
               child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey.shade200)),
                 child: Column(
                   children: [
                     Text(day, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF666666), height: 1)),
-                    Text(month, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isCancelled ? Colors.grey : accentBlue)),
+                    Text(month, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isCancelledOrExpired ? Colors.grey : accentBlue)),
                     const SizedBox(height: 5),
                     Container(height: 1, color: Colors.grey.shade200),
                     const SizedBox(height: 5),
@@ -508,9 +534,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
     );
   }
 
-  // =======================================================
-  // --- NUEVA BARRA FLOTANTE (ESTILO PÍLDORA) ---
-  // =======================================================
   Widget _buildFloatingNavBar(BuildContext context, {required int activeIndex}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -529,22 +552,15 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          // 0. HOME -> Usamos Navigator.pop para volver sin crear un bucle de pantallas
           _buildNavItem(Icons.home_rounded, 0, activeIndex, () {
             Navigator.pop(context);
           }),
-
-          // 1. CITAS -> Estamos aquí, no hace nada
           _buildNavItem(Icons.receipt_long_rounded, 1, activeIndex, () {}),
-
-          // 2. PERFIL (Tu foto dinámica)
           _buildProfileNavItem(2, activeIndex),
-
-          // 3. AJUSTES
           _buildNavItem(Icons.settings_rounded, 3, activeIndex, () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              MaterialPageRoute(builder: (context) => SettingsScreen(idCliente: widget.idUsuarioCliente)),
             );
           }),
         ],

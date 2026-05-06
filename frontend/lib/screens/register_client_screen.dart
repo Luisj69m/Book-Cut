@@ -234,13 +234,7 @@ class _RegisterClientScreenState extends State<RegisterClientScreen> {
 
                       const SizedBox(height: 15),
 
-                      _buildGlowingButton("Soy Barbero", () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (context) => const RegisterBarberScreen()),
-                        );
 
-                      }),
                     ],
                   ),
                 ),

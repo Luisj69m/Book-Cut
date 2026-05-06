@@ -76,12 +76,12 @@ class _RegisterBarberScreenState extends State<RegisterBarberScreen> {
 
       // Llamamos de verdad al backend de Iván rellenando los huecos vacíos
       await ApiService().registrarUsuario(
-          "Barbero", // Nombre por defecto
-          "",        // Apellidos vacíos
-          email,     // El email validado
-          password,  // La contraseña validada
-          "",        // Teléfono vacío
-          "BARBERO"  // El rol asignado a esta pantalla
+          "Cliente",        // Nombre
+          "App",            // Apellido (Antes estaba vacío)
+          email,            // Email real
+          password,         // Contraseña real
+          "000000000",      // Teléfono genérico (Antes estaba vacío)
+          "CLIENTE"         // Rol
       );
 
       if (mounted) {
@@ -91,8 +91,21 @@ class _RegisterBarberScreenState extends State<RegisterBarberScreen> {
         );
       }
     } catch (e) {
+      // 👇 1. ESTO LO IMPRIMIRÁ EN LA CONSOLA DE TU EDITOR (Android Studio/VS Code)
+      print("🚨 ERROR FATAL EN REGISTRO: $e");
+
+      // 👇 2. ESTO EVITA QUE EL SNACKBAR SALGA VACÍO
+      String mensajeError = e.toString().replaceAll('Exception: ', '');
+      if (mensajeError.trim().isEmpty) {
+        mensajeError = "Error desconocido del servidor. Revisa la consola.";
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent),
+        SnackBar(
+          content: Text(mensajeError),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } finally {
       if (mounted) setState(() { _isLoading = false; });
