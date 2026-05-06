@@ -1,6 +1,11 @@
 class ApiConfig {
+<<<<<<< HEAD
 
   static const String baseUrl = "https://book-cut.onrender.com";
+=======
+  //  SI CAMBIA EL ROUTER, SOLO HAY QUE CAMBIAR ESTA LÍNEA
+  static const String baseUrl = "http://10.0.2.2:8080/api";
+>>>>>>> c5e67d7597503af806e6f9d3902f6796f8f001a2
 
   // Endpoints centralizados
   static const String login = "$baseUrl/usuarios/login";
