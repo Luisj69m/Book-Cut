@@ -3,6 +3,7 @@ package com.darkmatter.bookcut.service;
 import com.darkmatter.bookcut.DTO.CitaResponseDTO;
 import com.darkmatter.bookcut.DTO.ServicioDTO;
 import com.darkmatter.bookcut.model.Cita;
+import com.darkmatter.bookcut.model.EstadoCita;
 import com.darkmatter.bookcut.repository.CitaRepository;
 import org.springframework.stereotype.Service;
 
@@ -73,15 +74,17 @@ public class CitaService {
         Cita cita = repositorioDeCitas.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
-        if (cita.getEstadoCita() == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA || cita.getEstadoCita() == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+        if (cita.getEstadoCita() == EstadoCita.COMPLETADA || cita.getEstadoCita() == EstadoCita.CANCELADA) {
             throw new RuntimeException("No se puede cancelar una cita que ya está " + cita.getEstadoCita());
         }
 
-        // Cambiamos estado en lugar de borrar
-        cita.setEstadoCita(com.darkmatter.bookcut.model.EstadoCita.CANCELADA);
+        if (LocalDateTime.now().isAfter(cita.getFechaHoraCita())) {
+            throw new RuntimeException("No se puede cancelar una cita cuya fecha ya ha pasado.");
+        }
+
+        cita.setEstadoCita(EstadoCita.CANCELADA);
         repositorioDeCitas.save(cita);
 
-        // Enviar correo (el código que ya tienes)
         emailService.enviarCorreo(cita.getClienteReserva().getCorreoElectronico(),
                 "Cancelación", "Tu cita ahora figura como CANCELADA.");
     }
