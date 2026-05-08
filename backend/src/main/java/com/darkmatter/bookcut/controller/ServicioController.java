@@ -5,99 +5,100 @@ import com.darkmatter.bookcut.model.Servicio;
 import com.darkmatter.bookcut.repository.BarberiaRepository;
 import com.darkmatter.bookcut.repository.CitaRepository;
 import com.darkmatter.bookcut.repository.ServicioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
-@CrossOrigin(origins = "*")
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Controlador para la gestión del catálogo de servicios.
+ * Permite operaciones CRUD sobre los servicios ofrecidos por cada barbería,
+ * garantizando la integridad referencial con el histórico de citas.
+ */
 @RestController
 @RequestMapping("/api/servicios")
 public class ServicioController {
 
-    private final ServicioRepository repositorioDeServicios;
+    private final ServicioRepository repositorioServicios;
+    private final BarberiaRepository repositorioBarberias;
+    private final CitaRepository repositorioCitas;
 
-    @Autowired
-    private BarberiaRepository  barberiaRepository;
-
-    @Autowired
-    private CitaRepository citaRepository;
-
-    public ServicioController(ServicioRepository repositorioDeServicios) {
-        this.repositorioDeServicios = repositorioDeServicios;
+    public ServicioController(ServicioRepository repositorioServicios, BarberiaRepository repositorioBarberias, CitaRepository repositorioCitas) {
+        this.repositorioServicios = repositorioServicios;
+        this.repositorioBarberias = repositorioBarberias;
+        this.repositorioCitas = repositorioCitas;
     }
 
     @GetMapping("/listar")
     public List<Servicio> obtenerTodosLosServicios() {
-        return repositorioDeServicios.findAll();
+        return repositorioServicios.findAll();
     }
-
 
     @PostMapping("/barberia/{idBarberia}")
     public ResponseEntity<?> crearServicioParaBarberia(@PathVariable Long idBarberia, @RequestBody Servicio nuevoServicio) {
         try {
-            java.util.Optional<Barberia> barberiaEncontrada = barberiaRepository.findById(idBarberia);
+            Optional<Barberia> barberiaEncontrada = repositorioBarberias.findById(idBarberia);
 
             if (barberiaEncontrada.isPresent()) {
                 nuevoServicio.setBarberia(barberiaEncontrada.get());
-                Servicio servicioGuardado = repositorioDeServicios.save(nuevoServicio);
+                Servicio servicioGuardado = repositorioServicios.save(nuevoServicio);
                 return ResponseEntity.ok(servicioGuardado);
             } else {
-                return ResponseEntity.status(404).body("La barbería no existe.");
+                return ResponseEntity.status(404).body("La barbería especificada no existe.");
             }
-        } catch (Exception excepcionCreacion) {
-            return ResponseEntity.badRequest().body("Error al crear servicio: " + excepcionCreacion.getMessage());
+        } catch (Exception excepcion) {
+            return ResponseEntity.badRequest().body("Error interno al crear el servicio: " + excepcion.getMessage());
         }
     }
 
     @PutMapping("/actualizar/{idServicio}")
     public ResponseEntity<?> actualizarServicio(@PathVariable Long idServicio, @RequestBody Servicio detallesServicio) {
         try {
-            return repositorioDeServicios.findById(idServicio)
+            return repositorioServicios.findById(idServicio)
                     .map(servicioEncontrado -> {
                         servicioEncontrado.setNombreServicio(detallesServicio.getNombreServicio());
                         servicioEncontrado.setPrecioServicio(detallesServicio.getPrecioServicio());
-                        return ResponseEntity.ok(repositorioDeServicios.save(servicioEncontrado));
+                        return ResponseEntity.ok(repositorioServicios.save(servicioEncontrado));
                     })
                     .orElse(ResponseEntity.notFound().build());
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error al actualizar: " + e.getMessage());
+        } catch (Exception excepcion) {
+            return ResponseEntity.badRequest().body("Error interno al actualizar el servicio: " + excepcion.getMessage());
         }
     }
 
     @DeleteMapping("/eliminar/{idServicio}")
     public ResponseEntity<String> eliminarServicio(@PathVariable Long idServicio) {
         try {
-            if (!repositorioDeServicios.existsById(idServicio)) {
-                return ResponseEntity.status(404).body("Servicio no encontrado");
+            if (!repositorioServicios.existsById(idServicio)) {
+                return ResponseEntity.status(404).body("El servicio especificado no existe.");
             }
 
-            // Comprobación manual de integridad
-            boolean tieneCitasRelacionadas = citaRepository.existsByServicioContratadoIdServicio(idServicio);
+            // Validación de integridad: Previene la eliminación si hay citas asociadas
+            boolean tieneCitasRelacionadas = repositorioCitas.existsByServicioContratadoIdServicio(idServicio);
 
             if (tieneCitasRelacionadas) {
-                return ResponseEntity.status(400).body("No se puede eliminar: el servicio está asociado a citas existentes");
+                return ResponseEntity.status(400).body("Violación de integridad: No se puede eliminar un servicio que está asociado a citas existentes en el sistema.");
             }
 
-            repositorioDeServicios.deleteById(idServicio);
-            return ResponseEntity.ok("Servicio eliminado correctamente");
+            repositorioServicios.deleteById(idServicio);
+            return ResponseEntity.ok("Servicio eliminado correctamente.");
 
         } catch (Exception excepcion) {
-            return ResponseEntity.status(500).body("Error interno: " + excepcion.getMessage());
+            return ResponseEntity.status(500).body("Error interno durante la eliminación: " + excepcion.getMessage());
         }
     }
 
     @GetMapping("/barberia/{idBarberia}")
     public ResponseEntity<?> obtenerServiciosPorBarberia(@PathVariable Long idBarberia) {
         try {
-            List<Servicio> listadoServicios = repositorioDeServicios.findByBarberia_IdBarberia(idBarberia);
+            List<Servicio> listadoServicios = repositorioServicios.findByBarberia_IdBarberia(idBarberia);
             if (listadoServicios.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
             return ResponseEntity.ok(listadoServicios);
-        } catch (Exception excepcionConsulta) {
-            return ResponseEntity.status(500).body("Error al obtener servicios: " + excepcionConsulta.getMessage());
+        } catch (Exception excepcion) {
+            return ResponseEntity.status(500).body("Error interno al obtener los servicios del local: " + excepcion.getMessage());
         }
     }
 }

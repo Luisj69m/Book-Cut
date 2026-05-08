@@ -2,60 +2,74 @@ package com.darkmatter.bookcut.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
 
+/**
+ * Utilidades para la gestión de JSON Web Tokens (JWT).
+ * Se encarga de la generación, cifrado y desglosado de los tokens de acceso,
+ * incluyendo la gestión de roles y la validación de tiempos de expiración.
+ */
 @Component
 public class JwtUtils {
 
-    // Cambiamos la llave aleatoria por una fija basada en un String secreto
-    private final String SEGUNDA_CLAVE_SECRETA = "EstaEsMiClaveSuperSecretaParaElTFGDeBarberia2026";
-    private final Key key = Keys.hmacShaKeyFor(SEGUNDA_CLAVE_SECRETA.getBytes());
+    // Clave secreta estática para garantizar que los tokens sobrevivan al reinicio del servidor
+    private final String CLAVE_SECRETA_FIRMA = "EstaEsMiClaveSuperSecretaParaElTFGDeBarberia2026";
+    private final Key llaveFirma = Keys.hmacShaKeyFor(CLAVE_SECRETA_FIRMA.getBytes());
 
-    private final long jwtExpirationMs = 86400000;
+    // Tiempo de vida del token: 24 horas (en milisegundos)
+    private final long TIEMPO_EXPIRACION_MS = 86400000;
 
-    // MÉTODO 1: Generar el token a partir del nombre de usuario
-    public String generarToken(String username, String rol) { // Añadimos el rol aquí
+    /**
+     * Genera un nuevo token firmado que incluye la identidad y el rol del usuario.
+     */
+    public String generarToken(String correoUsuario, String nombreRol) {
         return Jwts.builder()
-                .setSubject(username)
-                .claim("rol", rol) // Metemos el rol dentro del token
+                .setSubject(correoUsuario)
+                .claim("rol", nombreRol)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
-                .signWith(key)
+                .setExpiration(new Date(System.currentTimeMillis() + TIEMPO_EXPIRACION_MS))
+                .signWith(llaveFirma)
                 .compact();
     }
 
-    // MÉTODO 2: Obtener el nombre de usuario de dentro del token
-    public String obtenerUsernameDeToken(String token) {
+    /**
+     * Extrae el correo electrónico (Subject) almacenado en el token.
+     */
+    public String obtenerUsernameDeToken(String tokenJwt) {
         return Jwts.parserBuilder()
-                .setSigningKey(key)
+                .setSigningKey(llaveFirma)
                 .build()
-                .parseClaimsJws(token)
+                .parseClaimsJws(tokenJwt)
                 .getBody()
                 .getSubject();
     }
 
-    // MÉTODO 3: Validar que el token es correcto y no ha expirado
-    public boolean validarToken(String token) {
+    /**
+     * Verifica la integridad y la vigencia temporal del token.
+     */
+    public boolean validarToken(String tokenJwt) {
         try {
-            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            Jwts.parserBuilder().setSigningKey(llaveFirma).build().parseClaimsJws(tokenJwt);
             return true;
-        } catch (Exception e) {
-            System.err.println("Token inválido: " + e.getMessage());
+        } catch (Exception excepcionValidacion) {
+            // El token puede ser inválido por expiración, firma corrupta o formato erróneo
+            return false;
         }
-        return false;
     }
 
-    public String obtenerRolDeToken(String token) {
+    /**
+     * Recupera el rol del usuario desde los claims personalizados del payload.
+     */
+    public String obtenerRolDeToken(String tokenJwt) {
         return Jwts.parserBuilder()
-                .setSigningKey(key) // Asegúrate de que 'key' es tu clave secreta de la clase
+                .setSigningKey(llaveFirma)
                 .build()
-                .parseClaimsJws(token)
+                .parseClaimsJws(tokenJwt)
                 .getBody()
-                .get("rol", String.class); // Extrae el campo "rol" del JSON del token
+                .get("rol", String.class);
     }
 }

@@ -1,67 +1,78 @@
 package com.darkmatter.bookcut.controller;
 
 import com.darkmatter.bookcut.DTO.PerfilRequestDTO;
+import com.darkmatter.bookcut.model.Barberia;
+import com.darkmatter.bookcut.model.Barbero;
+import com.darkmatter.bookcut.model.RolUsuario;
 import com.darkmatter.bookcut.model.Usuario;
-import com.darkmatter.bookcut.service.UsuarioService;
+import com.darkmatter.bookcut.repository.BarberiaRepository;
+import com.darkmatter.bookcut.repository.BarberoRepository;
 import com.darkmatter.bookcut.security.JwtUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.darkmatter.bookcut.service.UsuarioService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import java.util.Map;
-import java.util.HashMap;
 
-@CrossOrigin(origins = "*")
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Controlador principal de usuarios.
+ * Gestiona autenticación, registro público, flujos de recuperación
+ * y operaciones exclusivas de administración (listar usuarios y registrar empleados).
+ */
 @RestController
 @RequestMapping("/api/usuarios")
 public class UsuarioController {
 
-    private final UsuarioService usuarioService;
+    private final UsuarioService servicioUsuarios;
+    private final BarberoRepository repositorioBarberos;
+    private final BarberiaRepository repositorioBarberias;
+    private final JwtUtils utilidadesJwt;
 
-    @Autowired
-    private com.darkmatter.bookcut.repository.BarberoRepository barberoRepository;
-
-    @Autowired
-    private com.darkmatter.bookcut.repository.BarberiaRepository barberiaRepository;
-
-    @Autowired
-    private JwtUtils jwtUtil;
-
-    public UsuarioController(UsuarioService usuarioService) {
-        this.usuarioService = usuarioService;
+    public UsuarioController(UsuarioService servicioUsuarios, BarberoRepository repositorioBarberos, BarberiaRepository repositorioBarberias, JwtUtils utilidadesJwt) {
+        this.servicioUsuarios = servicioUsuarios;
+        this.repositorioBarberos = repositorioBarberos;
+        this.repositorioBarberias = repositorioBarberias;
+        this.utilidadesJwt = utilidadesJwt;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Usuario credenciales) {
+    public ResponseEntity<?> iniciarSesion(@RequestBody Usuario credenciales) {
         try {
-            Usuario usuarioEncontrado = usuarioService.validarLogin(
+            Usuario usuarioEncontrado = servicioUsuarios.validarLogin(
                     credenciales.getCorreoElectronico(),
                     credenciales.getContrasenaUsuario()
             );
-            String tokenGenerado = jwtUtil.generarToken(usuarioEncontrado.getCorreoElectronico(), usuarioEncontrado.getRolUsuario().name());
+            String tokenGenerado = utilidadesJwt.generarToken(usuarioEncontrado.getCorreoElectronico(), usuarioEncontrado.getRolUsuario().name());
+
             Map<String, Object> respuesta = new HashMap<>();
             respuesta.put("usuario", usuarioEncontrado);
             respuesta.put("token", tokenGenerado);
+
             return ResponseEntity.ok(respuesta);
-        } catch (RuntimeException excepcion) {
+        } catch (RuntimeException excepcionValidacion) {
             Map<String, String> error = new HashMap<>();
             error.put("mensaje", "Credenciales incorrectas");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
-        } catch (Exception e) {
+        } catch (Exception excepcionGeneral) {
             Map<String, String> error = new HashMap<>();
-            error.put("mensaje", "Error interno: " + e.getMessage());
+            error.put("mensaje", "Error interno: " + excepcionGeneral.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
     @PostMapping("/registrar")
-    public ResponseEntity<?> registrar(@RequestBody Usuario nuevoUsuario) {
+    public ResponseEntity<?> registrarUsuario(@RequestBody Usuario nuevoUsuario) {
         try {
-            Usuario usuarioRegistrado = usuarioService.registrarNuevoUsuario(nuevoUsuario);
+            Usuario usuarioRegistrado = servicioUsuarios.registrarNuevoUsuario(nuevoUsuario);
             return ResponseEntity.status(HttpStatus.CREATED).body(usuarioRegistrado);
-        } catch (RuntimeException excepcion) {
+        } catch (RuntimeException excepcionValidacion) {
             Map<String, String> error = new HashMap<>();
-            error.put("mensaje", excepcion.getMessage());
+            error.put("mensaje", excepcionValidacion.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         } catch (Exception excepcionGeneral) {
             Map<String, String> error = new HashMap<>();
@@ -73,7 +84,7 @@ public class UsuarioController {
     @DeleteMapping("/eliminar/{idUsuario}")
     public ResponseEntity<String> eliminarCuenta(@PathVariable Long idUsuario) {
         try {
-            usuarioService.eliminarCuentaDeUsuario(idUsuario);
+            servicioUsuarios.eliminarCuentaDeUsuario(idUsuario);
             return ResponseEntity.ok("Cuenta y datos asociados eliminados correctamente");
         } catch (Exception excepcion) {
             return ResponseEntity.badRequest().body("Error al intentar eliminar la cuenta");
@@ -83,8 +94,13 @@ public class UsuarioController {
     @PostMapping("/solicitar-recuperacion")
     public ResponseEntity<String> solicitarRecuperacionContrasena(@RequestBody Map<String, String> peticion) {
         String correoElectronico = peticion.get("correoElectronico");
-        usuarioService.enviarEmailRecuperacion(correoElectronico);
-        return ResponseEntity.ok("Si el correo existe, se enviaran instrucciones.");
+        try {
+            servicioUsuarios.enviarEmailRecuperacion(correoElectronico);
+            return ResponseEntity.ok("Si el correo existe, se enviarán instrucciones.");
+        } catch (Exception excepcionCorreo) {
+            System.err.println("Error SMTP en recuperación: " + excepcionCorreo.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno al intentar enviar el correo.");
+        }
     }
 
     @PostMapping("/confirmar-recuperacion")
@@ -92,25 +108,22 @@ public class UsuarioController {
         try {
             String codigoDeRecuperacion = peticion.get("codigo");
             String contrasenaNueva = peticion.get("nuevaContrasena");
-            usuarioService.actualizarContrasena(codigoDeRecuperacion, contrasenaNueva);
-            return ResponseEntity.ok("Contrasena actualizada correctamente");
+            servicioUsuarios.actualizarContrasena(codigoDeRecuperacion, contrasenaNueva);
+            return ResponseEntity.ok("Contraseña actualizada correctamente");
         } catch (RuntimeException excepcion) {
             return ResponseEntity.badRequest().body(excepcion.getMessage());
         }
     }
 
     @PostMapping("/admin/registrar-barbero")
-    public org.springframework.http.ResponseEntity<?> registrarBarbero(
-            @RequestHeader("Authorization") String cabeceraToken,
-            @RequestBody java.util.Map<String, Object> datosPeticion) {
+    public ResponseEntity<?> registrarBarbero(
+            @AuthenticationPrincipal String correoAdministrador,
+            @RequestBody Map<String, Object> datosPeticion) {
         try {
-            String tokenExtraido = cabeceraToken.substring(7);
-            String correoAdministrador = jwtUtil.obtenerUsernameDeToken(tokenExtraido);
-
-            Usuario administradorVerificado = usuarioService.obtenerUsuarioPorCorreo(correoAdministrador);
+            Usuario administradorVerificado = servicioUsuarios.obtenerUsuarioPorCorreo(correoAdministrador);
 
             if (!administradorVerificado.getRolUsuario().name().equals("ADMIN")) {
-                return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body("Acceso denegado: Requiere permisos de administrador");
             }
 
@@ -119,42 +132,40 @@ public class UsuarioController {
             nuevoBarbero.setCorreoElectronico(datosPeticion.get("correoElectronico").toString());
             nuevoBarbero.setContrasenaUsuario(datosPeticion.get("contrasenaUsuario").toString());
             nuevoBarbero.setTelefono(datosPeticion.get("telefonoUsuario").toString());
-            nuevoBarbero.setRolUsuario(com.darkmatter.bookcut.model.RolUsuario.BARBERO);
+            nuevoBarbero.setRolUsuario(RolUsuario.BARBERO);
 
-            Usuario barberoRegistrado = usuarioService.registrarUsuarioDesdeAdmin(nuevoBarbero);
+            Usuario barberoRegistrado = servicioUsuarios.registrarUsuarioDesdeAdmin(nuevoBarbero);
 
             Long identificadorBarberia = Long.valueOf(datosPeticion.get("idBarberia").toString());
-            com.darkmatter.bookcut.model.Barberia barberiaDestino = barberiaRepository.findById(identificadorBarberia)
+            Barberia barberiaDestino = repositorioBarberias.findById(identificadorBarberia)
                     .orElseThrow(() -> new RuntimeException("La barbería especificada no existe"));
 
-            com.darkmatter.bookcut.model.Barbero nuevoPerfilBarbero = new com.darkmatter.bookcut.model.Barbero();
+            Barbero nuevoPerfilBarbero = new Barbero();
             nuevoPerfilBarbero.setUsuarioAsignado(barberoRegistrado);
             nuevoPerfilBarbero.setBarberiaAsignada(barberiaDestino);
-            barberoRepository.save(nuevoPerfilBarbero);
+            repositorioBarberos.save(nuevoPerfilBarbero);
 
-            return org.springframework.http.ResponseEntity.ok(barberoRegistrado);
+            return ResponseEntity.ok(barberoRegistrado);
         } catch (Exception excepcionRegistro) {
-            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error al registrar barbero: " + excepcionRegistro.getMessage());
         }
     }
 
     @GetMapping("/listar")
-    public ResponseEntity<?> listarTodosLosUsuarios(@RequestHeader("Authorization") String tokenHeader) {
+    public ResponseEntity<?> listarTodosLosUsuarios(@AuthenticationPrincipal String correoAdministrador) {
         try {
-            String tokenLimpio = tokenHeader.substring(7);
-            String correoAdmin = jwtUtil.obtenerUsernameDeToken(tokenLimpio);
-            Usuario admin = usuarioService.obtenerUsuarioPorCorreo(correoAdmin);
+            Usuario administradorVerificado = servicioUsuarios.obtenerUsuarioPorCorreo(correoAdministrador);
 
-            if (!admin.getRolUsuario().name().equals("ADMIN")) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Acceso denegado");
+            if (!administradorVerificado.getRolUsuario().name().equals("ADMIN")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Acceso denegado: Requiere permisos de administrador");
             }
 
-            java.util.List<Usuario> listaUsuarios = usuarioService.obtenerTodosLosUsuarios();
-            java.util.List<java.util.Map<String, Object>> respuestaMapeada = new java.util.ArrayList<>();
+            List<Usuario> listaUsuarios = servicioUsuarios.obtenerTodosLosUsuarios();
+            List<Map<String, Object>> respuestaMapeada = new ArrayList<>();
 
             for (Usuario usuarioActual : listaUsuarios) {
-                java.util.Map<String, Object> usuarioMap = new java.util.HashMap<>();
+                Map<String, Object> usuarioMap = new HashMap<>();
                 usuarioMap.put("idUsuario", usuarioActual.getIdUsuario());
                 usuarioMap.put("nombre", usuarioActual.getNombre());
                 usuarioMap.put("correoElectronico", usuarioActual.getCorreoElectronico());
@@ -162,7 +173,7 @@ public class UsuarioController {
                 usuarioMap.put("rolUsuario", usuarioActual.getRolUsuario());
 
                 if (usuarioActual.getRolUsuario() != null && usuarioActual.getRolUsuario().name().equals("BARBERO")) {
-                    barberoRepository.findByUsuarioAsignadoIdUsuario(usuarioActual.getIdUsuario())
+                    repositorioBarberos.findByUsuarioAsignadoIdUsuario(usuarioActual.getIdUsuario())
                             .ifPresentOrElse(
                                     barbero -> usuarioMap.put("nombreBarberia", barbero.getBarberiaAsignada().getNombre()),
                                     () -> usuarioMap.put("nombreBarberia", "Sin asignar")
@@ -180,12 +191,12 @@ public class UsuarioController {
     }
 
     @GetMapping("/perfil/{correo}")
-    public ResponseEntity<?> obtenerPerfil(@PathVariable String correo) {
-        return ResponseEntity.ok(usuarioService.obtenerPerfil(correo));
+    public ResponseEntity<?> obtenerPerfilUsuario(@PathVariable String correo) {
+        return ResponseEntity.ok(servicioUsuarios.obtenerPerfil(correo));
     }
 
     @PutMapping("/perfil/{correo}")
-    public ResponseEntity<?> actualizarPerfil(@PathVariable String correo, @RequestBody PerfilRequestDTO dto) {
-        return ResponseEntity.ok(usuarioService.actualizarPerfil(correo, dto));
+    public ResponseEntity<?> actualizarPerfilUsuario(@PathVariable String correo, @RequestBody PerfilRequestDTO datosActualizados) {
+        return ResponseEntity.ok(servicioUsuarios.actualizarPerfil(correo, datosActualizados));
     }
 }

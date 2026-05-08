@@ -5,6 +5,11 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 
+/**
+ * Entidad JPA que representa un servicio ofrecido en un local.
+ * Su campo precioServicio actúa como origen de datos para las nuevas citas y
+ * como valor de contingencia (fallback) en el cálculo de facturación si la cita carece de precio final.
+ */
 @Entity
 @Table(name = "tabla_servicios")
 public class Servicio {
@@ -26,7 +31,7 @@ public class Servicio {
     @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "id_barberia", nullable = false)
-    private Barberia barberia;
+    private Barberia barberiaAsignada;
 
     public Servicio() {
     }
@@ -68,11 +73,11 @@ public class Servicio {
         this.duracionMinutos = duracionMinutos;
     }
 
-    public Barberia getBarberia() {
-        return barberia;
+    public Barberia getBarberiaAsignada() {
+        return barberiaAsignada;
     }
 
-    public void setBarberia(Barberia barberia) {
-        this.barberia = barberia;
+    public void setBarberiaAsignada(Barberia barberiaAsignada) {
+        this.barberiaAsignada = barberiaAsignada;
     }
 }

@@ -4,21 +4,28 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * Tarea programada para evitar la suspensión de la instancia en Render.
+ * Realiza una petición periódica al endpoint de salud para mantener el backend activo.
+ */
 @Component
 public class KeepAliveTask {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate plantillaRest = new RestTemplate();
+    private final String urlSaludBackend = "https://book-cut.onrender.com/actuator/health";
 
-    // Se ejecuta cada 12 minutos (720,000 milisegundos)
+    /**
+     * Ejecuta una petición GET cada 12 minutos.
+     * El intervalo de 720,000 milisegundos se elige para anticiparse al tiempo de inactividad de Render.
+     */
     @Scheduled(fixedRate = 720000)
-    public void pingMyself() {
+    public void mantenerServidorActivo() {
         try {
-            // Sustituye por tu URL real de Render
-            String url = "https://book-cut.onrender.com/actuator/health";
-            restTemplate.getForObject(url, String.class);
-            System.out.println("Keep-Alive: Ping enviado con éxito para mantener el servidor despierto.");
-        } catch (Exception e) {
-            System.err.println("Keep-Alive: Error al enviar el ping, pero no pasa nada.");
+            plantillaRest.getForObject(urlSaludBackend, String.class);
+            System.out.println("Keep-Alive: Señal de actividad enviada correctamente.");
+        } catch (Exception excepcion) {
+            // Se captura la excepción para evitar trazas innecesarias en el log de Render
+            System.err.println("Keep-Alive: El servidor de destino no respondió, se reintentará en el próximo ciclo.");
         }
     }
 }

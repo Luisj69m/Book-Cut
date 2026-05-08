@@ -2,6 +2,11 @@ package com.darkmatter.bookcut.model;
 
 import jakarta.persistence.*;
 
+/**
+ * Entidad JPA principal que representa a los usuarios del sistema.
+ * Define el contrato base de autenticación y los datos de contacto,
+ * delegando el nivel de acceso al campo rolUsuario.
+ */
 @Entity
 @Table(name = "tabla_usuarios")
 public class Usuario {
@@ -33,7 +38,6 @@ public class Usuario {
     public Usuario() {
     }
 
-    // Constructor actualizado para incluir los nuevos campos si quieres usarlos al crear
     public Usuario(String correoElectronico, String contrasenaUsuario, String nombre, String apellidos, String telefono, RolUsuario rolUsuario) {
         this.correoElectronico = correoElectronico;
         this.contrasenaUsuario = contrasenaUsuario;
@@ -43,25 +47,59 @@ public class Usuario {
         this.rolUsuario = rolUsuario;
     }
 
-    // Getters y Setters
-    public Long getIdUsuario() { return idUsuario; }
-    public void setIdUsuario(Long idUsuario) { this.idUsuario = idUsuario; }
+    public Long getIdUsuario() {
+        return idUsuario;
+    }
 
-    public String getCorreoElectronico() { return correoElectronico; }
-    public void setCorreoElectronico(String correoElectronico) { this.correoElectronico = correoElectronico; }
+    public void setIdUsuario(Long idUsuario) {
+        this.idUsuario = idUsuario;
+    }
 
-    public String getContrasenaUsuario() { return contrasenaUsuario; }
-    public void setContrasenaUsuario(String contrasenaUsuario) { this.contrasenaUsuario = contrasenaUsuario; }
+    public String getCorreoElectronico() {
+        return correoElectronico;
+    }
 
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
+    public void setCorreoElectronico(String correoElectronico) {
+        this.correoElectronico = correoElectronico;
+    }
 
-    public String getApellidos() { return apellidos; }
-    public void setApellidos(String apellidos) { this.apellidos = apellidos; }
+    public String getContrasenaUsuario() {
+        return contrasenaUsuario;
+    }
 
-    public String getTelefono() { return telefono; }
-    public void setTelefono(String telefono) { this.telefono = telefono; }
+    public void setContrasenaUsuario(String contrasenaUsuario) {
+        this.contrasenaUsuario = contrasenaUsuario;
+    }
 
-    public RolUsuario getRolUsuario() { return rolUsuario; }
-    public void setRolUsuario(RolUsuario rolUsuario) { this.rolUsuario = rolUsuario; }
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public String getApellidos() {
+        return apellidos;
+    }
+
+    public void setApellidos(String apellidos) {
+        this.apellidos = apellidos;
+    }
+
+    public String getTelefono() {
+        return telefono;
+    }
+
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
+    }
+
+    public RolUsuario getRolUsuario() {
+        return rolUsuario;
+    }
+
+    public void setRolUsuario(RolUsuario rolUsuario) {
+        this.rolUsuario = rolUsuario;
+    }
 }
