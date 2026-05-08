@@ -3,6 +3,7 @@ package com.darkmatter.bookcut.controller;
 import com.darkmatter.bookcut.model.Cita;
 import com.darkmatter.bookcut.model.EstadoCita;
 import com.darkmatter.bookcut.repository.CitaRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -14,26 +15,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Controlador para la generación de reportes de facturación.
- * Calcula los ingresos basados estrictamente en citas finalizadas, protegiendo
- * el histórico de precios ante posibles subidas de tarifas en los servicios.
- */
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/admin/facturacion")
 public class FacturacionController {
 
-    private final CitaRepository repositorioCitas;
-
-    public FacturacionController(CitaRepository repositorioCitas) {
-        this.repositorioCitas = repositorioCitas;
-    }
+    @Autowired
+    private CitaRepository repositorioDeCitas;
 
     @GetMapping("/resumen")
     public Map<String, Object> obtenerResumenIngresos(@RequestParam(defaultValue = "siempre") String periodoFiltro) {
 
         LocalDateTime momentoActual = LocalDateTime.now();
         LocalDateTime fechaInicioFiltro;
+        LocalDateTime fechaFinFiltro = momentoActual;
 
         switch (periodoFiltro.toLowerCase()) {
             case "dia":
@@ -50,10 +45,10 @@ public class FacturacionController {
                 break;
         }
 
-        List<Cita> citasCompletadasFiltradas = repositorioCitas.findByEstadoCitaAndFechaHoraCitaBetween(
+        List<Cita> citasCompletadasFiltradas = repositorioDeCitas.findByEstadoCitaAndFechaHoraCitaBetween(
                 EstadoCita.COMPLETADA,
                 fechaInicioFiltro,
-                momentoActual
+                fechaFinFiltro
         );
 
         BigDecimal ingresosTotalesAcumulados = citasCompletadasFiltradas.stream()

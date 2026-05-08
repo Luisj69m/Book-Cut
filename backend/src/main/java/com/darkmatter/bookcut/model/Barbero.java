@@ -10,10 +10,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
-/**
- * Entidad pivote que representa el perfil profesional de un empleado.
- * Vincula de forma estricta un Usuario (con rol BARBERO) a una Barberia específica.
- */
 @Entity
 @Table(name = "tabla_barberos")
 public class Barbero {

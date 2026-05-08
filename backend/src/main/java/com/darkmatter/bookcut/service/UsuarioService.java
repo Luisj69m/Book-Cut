@@ -2,46 +2,52 @@ package com.darkmatter.bookcut.service;
 
 import com.darkmatter.bookcut.DTO.PerfilRequestDTO;
 import com.darkmatter.bookcut.DTO.PerfilResponseDTO;
-import com.darkmatter.bookcut.model.RolUsuario;
 import com.darkmatter.bookcut.model.Usuario;
 import com.darkmatter.bookcut.repository.CitaRepository;
 import com.darkmatter.bookcut.repository.UsuarioRepository;
+import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class UsuarioService {
 
-    private final UsuarioRepository repositorioUsuario;
-    private final CitaRepository repositorioCitas;
-    private final AuthService servicioAutenticacion;
+    private final UsuarioRepository usuarioRepository;
+    private final CitaRepository citaRepository;
+    private final org.springframework.mail.javamail.JavaMailSender enviadorDeCorreos;
+    private final JdbcTemplate baseDeDatosDirecta;
 
-    public UsuarioService(UsuarioRepository repositorioUsuario,
-                          CitaRepository repositorioCitas,
-                          AuthService servicioAutenticacion) {
-        this.repositorioUsuario = repositorioUsuario;
-        this.repositorioCitas = repositorioCitas;
-        this.servicioAutenticacion = servicioAutenticacion;
+    @Autowired
+    public UsuarioService(UsuarioRepository usuarioRepository,
+                          CitaRepository citaRepository,
+                          org.springframework.mail.javamail.JavaMailSender enviadorDeCorreos,
+                          JdbcTemplate baseDeDatosDirecta) {
+        this.usuarioRepository = usuarioRepository;
+        this.citaRepository = citaRepository;
+        this.enviadorDeCorreos = enviadorDeCorreos;
+        this.baseDeDatosDirecta = baseDeDatosDirecta;
     }
 
-    @Transactional
     public Usuario registrarNuevoUsuario(Usuario nuevoUsuario) {
-        if (repositorioUsuario.findByCorreoElectronico(nuevoUsuario.getCorreoElectronico()).isPresent()) {
-            throw new RuntimeException("El correo electrónico ya está registrado");
+        if (usuarioRepository.findByCorreoElectronico(nuevoUsuario.getCorreoElectronico()).isPresent()) {
+            throw new RuntimeException("El correo electronico ya esta registrado");
         }
-        nuevoUsuario.setRolUsuario(RolUsuario.CLIENTE);
-        return repositorioUsuario.save(nuevoUsuario);
+        nuevoUsuario.setRolUsuario(com.darkmatter.bookcut.model.RolUsuario.CLIENTE);
+        return usuarioRepository.save(nuevoUsuario);
     }
 
     public Usuario validarLogin(String correo, String contrasena) {
-        return repositorioUsuario.findByCorreoElectronicoAndContrasenaUsuario(correo, contrasena)
+        return usuarioRepository.findByCorreoElectronicoAndContrasenaUsuario(correo, contrasena)
                 .orElseThrow(() -> new RuntimeException("Credenciales incorrectas"));
     }
 
     public PerfilResponseDTO obtenerPerfil(String correo) {
-        Usuario usuario = repositorioUsuario.findByCorreoElectronico(correo)
+        Usuario usuario = usuarioRepository.findByCorreoElectronico(correo)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         return new PerfilResponseDTO(
@@ -53,55 +59,79 @@ public class UsuarioService {
     }
 
     @Transactional
-    public PerfilResponseDTO actualizarPerfil(String correo, PerfilRequestDTO datosActualizados) {
-        Usuario usuario = repositorioUsuario.findByCorreoElectronico(correo)
+    public PerfilResponseDTO actualizarPerfil(String correo, PerfilRequestDTO dto) {
+        Usuario usuario = usuarioRepository.findByCorreoElectronico(correo)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        usuario.setNombre(datosActualizados.getNombre());
-        usuario.setApellidos(datosActualizados.getApellidos());
-        usuario.setTelefono(datosActualizados.getTelefono());
+        usuario.setNombre(dto.getNombre());
+        usuario.setApellidos(dto.getApellidos());
+        usuario.setTelefono(dto.getTelefono());
 
-        repositorioUsuario.save(usuario);
+        usuarioRepository.save(usuario);
         return obtenerPerfil(correo);
     }
 
     @Transactional
     public void eliminarCuentaDeUsuario(Long idUsuario) {
-        repositorioCitas.deleteByClienteReserva_IdUsuario(idUsuario);
-        repositorioUsuario.deleteById(idUsuario);
+        citaRepository.deleteByClienteReserva_IdUsuario(idUsuario);
+        usuarioRepository.deleteById(idUsuario);
     }
 
-    // MÉTODOS REINTEGRADOS PARA COMPATIBILIDAD CON EL CONTROLLER
-
-    /**
-     * Delega la creación del token y envío de email al servicio especializado.
-     */
     public void enviarEmailRecuperacion(String correoDestino) {
-        servicioAutenticacion.crearTokenRecuperacion(correoDestino);
+        Usuario usuario = usuarioRepository.findByCorreoElectronico(correoDestino)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        String codigoRecuperacion = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+
+        String instruccionSql = "INSERT INTO tokens_restablecer_contrasena (id_usuario, token, fecha_expiracion) " +
+                "VALUES (?, ?, ?) ON CONFLICT (id_usuario) DO UPDATE SET token = EXCLUDED.token, fecha_expiracion = EXCLUDED.fecha_expiracion";
+
+        baseDeDatosDirecta.update(instruccionSql, usuario.getIdUsuario(), codigoRecuperacion, LocalDateTime.now().plusMinutes(15));
+
+        org.springframework.mail.SimpleMailMessage mensaje = new org.springframework.mail.SimpleMailMessage();
+        mensaje.setFrom("soporte@bookcut.com");
+        mensaje.setTo(correoDestino);
+        mensaje.setSubject("Código de recuperación de contraseña");
+        mensaje.setText("Tu código para recuperar la contraseña es: " + codigoRecuperacion);
+
+        enviadorDeCorreos.send(mensaje);
     }
 
-    /**
-     * Delega la validación del código y cambio de clave al servicio especializado.
-     */
     @Transactional
     public void actualizarContrasena(String codigo, String nuevaContrasena) {
-        servicioAutenticacion.cambiarContrasenaConToken(codigo, nuevaContrasena);
+        String consultaSql = "SELECT id_usuario FROM tokens_restablecer_contrasena WHERE token = ? AND fecha_expiracion > ?";
+
+        List<Long> listaIdentificadores = baseDeDatosDirecta.queryForList(consultaSql, Long.class, codigo, LocalDateTime.now());
+
+        if (listaIdentificadores.isEmpty()) {
+            throw new RuntimeException("El código es inválido o ha caducado");
+        }
+
+        Long identificadorUsuario = listaIdentificadores.get(0);
+
+        Usuario usuario = usuarioRepository.findById(identificadorUsuario)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        usuario.setContrasenaUsuario(nuevaContrasena);
+        usuarioRepository.save(usuario);
+
+        String borradoSql = "DELETE FROM tokens_restablecer_contrasena WHERE id_usuario = ?";
+        baseDeDatosDirecta.update(borradoSql, identificadorUsuario);
     }
 
-    @Transactional
     public Usuario registrarUsuarioDesdeAdmin(Usuario nuevoUsuario) {
-        if (repositorioUsuario.findByCorreoElectronico(nuevoUsuario.getCorreoElectronico()).isPresent()) {
-            throw new RuntimeException("El correo electrónico ya está registrado");
+        if (usuarioRepository.findByCorreoElectronico(nuevoUsuario.getCorreoElectronico()).isPresent()) {
+            throw new RuntimeException("El correo electronico ya esta registrado");
         }
-        return repositorioUsuario.save(nuevoUsuario);
+        return usuarioRepository.save(nuevoUsuario);
     }
 
     public Usuario obtenerUsuarioPorCorreo(String correo) {
-        return repositorioUsuario.findByCorreoElectronico(correo)
+        return usuarioRepository.findByCorreoElectronico(correo)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
     }
 
     public List<Usuario> obtenerTodosLosUsuarios() {
-        return repositorioUsuario.findAll();
+        return usuarioRepository.findAll();
     }
 }

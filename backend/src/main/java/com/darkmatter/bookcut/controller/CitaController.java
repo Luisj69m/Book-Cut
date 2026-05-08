@@ -1,9 +1,11 @@
 package com.darkmatter.bookcut.controller;
 
+import com.darkmatter.bookcut.DTO.CitaResponseDTO;
 import com.darkmatter.bookcut.model.*;
 import com.darkmatter.bookcut.repository.*;
 import com.darkmatter.bookcut.service.CitaService;
 import com.darkmatter.bookcut.service.UsuarioService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -11,55 +13,49 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-/**
- * Controlador principal para la gestión de citas.
- * Gestiona la creación, modificación de estados y consultas de historial,
- * aplicando estrictas validaciones de identidad mediante el token JWT.
- */
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/citas")
 public class CitaController {
 
-    private final CitaService servicioCitas;
-    private final CitaRepository repositorioCitas;
-    private final BarberoRepository repositorioBarberos;
-    private final UsuarioService servicioUsuarios;
-    private final BarberiaRepository repositorioBarberias;
-    private final ServicioRepository repositorioServicios;
-
-    public CitaController(CitaService servicioCitas, CitaRepository repositorioCitas, BarberoRepository repositorioBarberos, UsuarioService servicioUsuarios, BarberiaRepository repositorioBarberias, ServicioRepository repositorioServicios) {
-        this.servicioCitas = servicioCitas;
-        this.repositorioCitas = repositorioCitas;
-        this.repositorioBarberos = repositorioBarberos;
-        this.servicioUsuarios = servicioUsuarios;
-        this.repositorioBarberias = repositorioBarberias;
-        this.repositorioServicios = repositorioServicios;
-    }
+    @Autowired
+    private CitaService citaService;
+    @Autowired
+    private CitaRepository citaRepository;
+    @Autowired
+    private BarberoRepository barberoRepository;
+    @Autowired
+    private UsuarioService usuarioService;
+    @Autowired
+    private BarberiaRepository barberiaRepository;
+    @Autowired
+    private ServicioRepository servicioRepository;
 
     @PostMapping("/crear")
-    public ResponseEntity<?> crearCita(@RequestBody Map<String, Object> datosPeticion, @AuthenticationPrincipal String correoCliente) {
+    public ResponseEntity<?> crearCita(@RequestBody Map<String, Object> datosPeticion, @AuthenticationPrincipal String correoCliente){
         try {
             Long identificadorBarberia = Long.valueOf(datosPeticion.get("idBarberia").toString());
             Long identificadorServicio = Long.valueOf(datosPeticion.get("idServicio").toString());
             String fechaTexto = datosPeticion.get("fechaHoraCita").toString();
 
-            Usuario clienteSolicitante = servicioUsuarios.obtenerUsuarioPorCorreo(correoCliente);
+            Usuario clienteSolicitante = usuarioService.obtenerUsuarioPorCorreo(correoCliente);
 
-            Barberia barberiaEncontrada = repositorioBarberias.findById(identificadorBarberia)
-                    .orElseThrow(() -> new RuntimeException("La barbería especificada no existe."));
-            Servicio servicioSolicitado = repositorioServicios.findById(identificadorServicio)
-                    .orElseThrow(() -> new RuntimeException("El servicio especificado no existe."));
+            Barberia barberiaEncontrada = barberiaRepository.findById(identificadorBarberia)
+                    .orElseThrow(() -> new RuntimeException("La barbería no existe."));
+            Servicio servicioSolicitado = servicioRepository.findById(identificadorServicio)
+                    .orElseThrow(() -> new RuntimeException("El servicio no existe."));
 
             LocalDateTime fechaProgramada;
             try {
                 fechaProgramada = LocalDateTime.parse(fechaTexto);
             } catch (Exception excepcionFormato) {
-                return ResponseEntity.status(400).body("Formato de fecha inválido. Utilice: YYYY-MM-DDTHH:mm:ss");
+                return ResponseEntity.status(400).body("Formato de fecha inválido. Usa: YYYY-MM-DDTHH:mm:ss");
             }
 
             if (fechaProgramada.isBefore(LocalDateTime.now())) {
-                return ResponseEntity.status(400).body("Violación de regla de negocio: No se pueden programar citas en el pasado.");
+                return ResponseEntity.status(400).body("No puedes programar citas en el pasado.");
             }
 
             int horaSolicitada = fechaProgramada.getHour();
@@ -67,8 +63,8 @@ public class CitaController {
                 return ResponseEntity.status(400).body("Horario no válido. Las reservas solo están permitidas entre las 09:00 y las 22:00.");
             }
 
-            Barbero barberoDisponible = repositorioBarberos.findFirstByBarberiaAsignadaIdBarberia(identificadorBarberia)
-                    .orElseThrow(() -> new RuntimeException("Esta barbería actualmente no tiene trabajadores asignados."));
+            Barbero barberoDisponible = barberoRepository.findFirstByBarberiaAsignadaIdBarberia(identificadorBarberia)
+                    .orElseThrow(() -> new RuntimeException("Esta barbería no tiene barberos asignados."));
 
             Cita citaPreparada = new Cita();
             citaPreparada.setClienteReserva(clienteSolicitante);
@@ -77,130 +73,115 @@ public class CitaController {
             citaPreparada.setEstadoCita(EstadoCita.PENDIENTE);
             citaPreparada.setBarberoAsignado(barberoDisponible);
 
-            Cita citaGuardada = servicioCitas.crearNuevaCita(citaPreparada);
+            Cita citaGuardada = citaService.crearNuevaCita(citaPreparada);
 
             return ResponseEntity.status(201).body(citaGuardada);
 
-        } catch (Exception excepcion) {
-            return ResponseEntity.status(400).body("Error al procesar la reserva: " + excepcion.getMessage());
+        } catch (Exception excepcionGeneral) {
+            return ResponseEntity.status(400).body("Error al procesar la reserva: " + excepcionGeneral.getMessage());
         }
     }
 
     @PutMapping("/{idCita}/estado")
-    public ResponseEntity<String> actualizarEstado(@PathVariable Long idCita, @RequestBody String nuevoEstado, @AuthenticationPrincipal String usuarioAutenticado) {
-        Cita citaEncontrada = repositorioCitas.findById(idCita).orElse(null);
-        if (citaEncontrada == null) {
-            return ResponseEntity.status(404).body("La cita no existe en los registros.");
+    public ResponseEntity<String> actualizarEstado(@PathVariable Long idCita, @RequestBody String nuevoEstado, @AuthenticationPrincipal String usuarioLogueado) {
+        Cita cita = citaRepository.findById(idCita).orElse(null);
+        if (cita == null) return ResponseEntity.status(404).body("Cita no encontrada.");
+        String emailBarbero = cita.getBarberoAsignado().getUsuarioAsignado().getCorreoElectronico();
+        if (!emailBarbero.equalsIgnoreCase(usuarioLogueado)) {
+            return ResponseEntity.status(403).body("Solo el barbero asignado puede cambiar el estado.");
         }
-
-        String correoElectronicoBarbero = citaEncontrada.getBarberoAsignado().getUsuarioAsignado().getCorreoElectronico();
-        if (!correoElectronicoBarbero.equalsIgnoreCase(usuarioAutenticado)) {
-            return ResponseEntity.status(403).body("Acceso denegado: Solo el trabajador asignado puede modificar el estado de la cita.");
-        }
-
-        String estadoSaneado = nuevoEstado.replaceAll("[^a-zA-Z]", "").trim().toUpperCase();
+        String estadoLimpio = nuevoEstado.replaceAll("[^a-zA-Z]", "").trim().toUpperCase();
         try {
-            // Nota arquitectónica: La lógica de fijar el precioFinal al pasar a ACEPTADA reside en la capa de servicio
-            servicioCitas.actualizarEstadoCita(idCita, estadoSaneado);
-            return ResponseEntity.ok("Estado de la cita actualizado correctamente a " + estadoSaneado);
-        } catch (Exception excepcion) {
-            return ResponseEntity.badRequest().body("Error durante la actualización: " + excepcion.getMessage());
+            citaService.actualizarEstadoCita(idCita, estadoLimpio);
+            return ResponseEntity.ok("Estado actualizado a " + estadoLimpio);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
 
     @GetMapping("/historial/{idUsuario}")
-    public ResponseEntity<?> obtenerHistorial(@PathVariable Long idUsuario, @AuthenticationPrincipal String correoAutenticado) {
-        Usuario usuarioConsultor = servicioUsuarios.obtenerUsuarioPorCorreo(correoAutenticado);
-
-        if (!usuarioConsultor.getIdUsuario().equals(idUsuario)) {
-            return ResponseEntity.status(403).body("Acceso denegado: Violación de privacidad al intentar consultar el historial de otro cliente.");
+    public ResponseEntity<?> historial(@PathVariable Long idUsuario, @AuthenticationPrincipal String correoLogueado) {
+        Usuario usuarioAutenticado = usuarioService.obtenerUsuarioPorCorreo(correoLogueado);
+        if (!usuarioAutenticado.getIdUsuario().equals(idUsuario)) {
+            return ResponseEntity.status(403).body("Acceso denegado: No puedes ver el historial de otro cliente.");
         }
-
-        return ResponseEntity.ok(servicioCitas.obtenerCitasPorUsuarioDTO(idUsuario));
+        return ResponseEntity.ok(citaService.obtenerCitasPorUsuarioDTO(idUsuario));
     }
 
     @GetMapping("/barbero/{idUsuario}/{estado}")
     public List<Cita> listarCitasPorBarberoYEstado(@PathVariable Long idUsuario, @PathVariable String estado) {
-        Barbero perfilBarbero = repositorioBarberos.findByUsuarioAsignadoIdUsuario(idUsuario)
-                .orElseThrow(() -> new RuntimeException("No se encontró un perfil de trabajador asociado a este usuario."));
-        EstadoCita enumeracionEstado = EstadoCita.valueOf(estado.toUpperCase().trim());
-
-        return repositorioCitas.findByBarberoAsignadoAndEstadoCita(perfilBarbero, enumeracionEstado);
+        Barbero barbero = barberoRepository.findByUsuarioAsignadoIdUsuario(idUsuario).orElseThrow(() -> new RuntimeException("No se encontró perfil de barbero"));
+        EstadoCita estadoEnum = EstadoCita.valueOf(estado.toUpperCase().trim());
+        return citaRepository.findByBarberoAsignadoAndEstadoCita(barbero, estadoEnum);
     }
 
     @PutMapping("/cancelar/{idCita}")
-    public ResponseEntity<String> cancelarCita(@PathVariable Long idCita, @AuthenticationPrincipal String usuarioAutenticado) {
-        Cita citaObjetivo = repositorioCitas.findById(idCita).orElse(null);
+    public ResponseEntity<String> cancelar(@PathVariable Long idCita, @AuthenticationPrincipal String usuarioLogueado) {
+        Cita citaEncontrada = citaRepository.findById(idCita).orElse(null);
 
-        if (citaObjetivo == null) {
-            return ResponseEntity.status(404).body("La cita indicada no existe.");
+        if (citaEncontrada == null) {
+            return ResponseEntity.status(404).body("Cita no encontrada.");
         }
 
-        String correoElectronicoCliente = citaObjetivo.getClienteReserva().getCorreoElectronico();
-        String correoElectronicoBarbero = citaObjetivo.getBarberoAsignado().getUsuarioAsignado().getCorreoElectronico();
+        String correoCliente = citaEncontrada.getClienteReserva().getCorreoElectronico();
+        String correoBarbero = citaEncontrada.getBarberoAsignado().getUsuarioAsignado().getCorreoElectronico();
 
-        if (!usuarioAutenticado.equalsIgnoreCase(correoElectronicoCliente) && !usuarioAutenticado.equalsIgnoreCase(correoElectronicoBarbero)) {
-            return ResponseEntity.status(403).body("Acceso denegado: No participa en esta cita y no puede cancelarla.");
+        if (!usuarioLogueado.equalsIgnoreCase(correoCliente) && !usuarioLogueado.equalsIgnoreCase(correoBarbero)) {
+            return ResponseEntity.status(403).body("No tienes permiso para cancelar esta cita.");
         }
 
         try {
-            servicioCitas.cancelarCita(idCita);
-            return ResponseEntity.ok("La cita ha sido cancelada exitosamente.");
-        } catch (RuntimeException excepcionValidacion) {
-            return ResponseEntity.status(400).body(excepcionValidacion.getMessage());
+            citaService.cancelarCita(idCita);
+            return ResponseEntity.ok("Cita cancelada correctamente.");
+        } catch (RuntimeException excepcionEstado) {
+            return ResponseEntity.status(400).body(excepcionEstado.getMessage());
         }
     }
 
     @GetMapping("/barbero/{idBarbero}/fecha/{fecha}")
     public List<Cita> obtenerCitasPorBarberoYFecha(@PathVariable Long idBarbero, @PathVariable String fecha) {
-        return repositorioCitas.findByBarberoAsignado_IdPerfilBarbero(idBarbero).stream()
-                .filter(cita -> cita.getFechaHoraCita().toLocalDate().toString().equals(fecha))
-                .toList();
+        return citaRepository.findByBarberoAsignado_IdPerfilBarbero(idBarbero).stream().filter(c -> c.getFechaHoraCita().toLocalDate().toString().equals(fecha)).toList();
     }
 
     @PutMapping("/{idCita}/finalizar")
-    public ResponseEntity<String> finalizarCita(@PathVariable Long idCita, @AuthenticationPrincipal String usuarioAutenticado) {
-        Cita citaObjetivo = repositorioCitas.findById(idCita).orElse(null);
-        if (citaObjetivo == null) {
-            return ResponseEntity.status(404).body("La cita indicada no existe.");
+    public ResponseEntity<String> finalizarCita(@PathVariable Long idCita, @AuthenticationPrincipal String usuarioLogueado) {
+        Cita cita = citaRepository.findById(idCita).orElse(null);
+        if (cita == null) return ResponseEntity.status(404).body("Cita no encontrada.");
+        String emailBarbero = cita.getBarberoAsignado().getUsuarioAsignado().getCorreoElectronico();
+        if (!emailBarbero.equalsIgnoreCase(usuarioLogueado)) {
+            return ResponseEntity.status(403).body("Solo el barbero puede finalizar la cita.");
         }
-
-        String correoElectronicoBarbero = citaObjetivo.getBarberoAsignado().getUsuarioAsignado().getCorreoElectronico();
-        if (!correoElectronicoBarbero.equalsIgnoreCase(usuarioAutenticado)) {
-            return ResponseEntity.status(403).body("Acceso denegado: Solo el trabajador encargado puede marcar la cita como completada.");
-        }
-
         try {
-            servicioCitas.actualizarEstadoCita(idCita, EstadoCita.COMPLETADA.name());
-            return ResponseEntity.ok("La cita ha finalizado correctamente.");
-        } catch (Exception excepcion) {
-            return ResponseEntity.badRequest().body("Error al finalizar la cita: " + excepcion.getMessage());
+            citaService.actualizarEstadoCita(idCita, "COMPLETADA");
+            return ResponseEntity.ok("Cita finalizada.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
 
     @GetMapping("/todas")
     public ResponseEntity<?> obtenerTodasLasCitasAbsolutas() {
         try {
-            List<Cita> registroTotalCitas = repositorioCitas.findAll();
-            if (registroTotalCitas.isEmpty()) {
+            List<Cita> listadoCompletoCitas = citaRepository.findAll();
+            if (listadoCompletoCitas.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
-            return ResponseEntity.ok(registroTotalCitas);
-        } catch (Exception excepcion) {
-            return ResponseEntity.status(500).body("Error interno al volcar el registro general de citas: " + excepcion.getMessage());
+            return ResponseEntity.ok(listadoCompletoCitas);
+        } catch (Exception excepcionConsulta) {
+            return ResponseEntity.status(500).body("Error al obtener el listado global de citas: " + excepcionConsulta.getMessage());
         }
     }
 
     @GetMapping("/barberia/{idBarberia}")
     public ResponseEntity<?> obtenerCitasPorBarberia(@PathVariable Long idBarberia) {
         try {
-            List<Cita> citasDelEstablecimiento = repositorioCitas.findByBarberoAsignado_BarberiaAsignada_IdBarberia(idBarberia);
-            if (citasDelEstablecimiento.isEmpty()) {
+            List<Cita> citasDelLocal = citaRepository.findByBarberoAsignado_BarberiaAsignada_IdBarberia(idBarberia);
+            if (citasDelLocal.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
-            return ResponseEntity.ok(citasDelEstablecimiento);
-        } catch (Exception excepcion) {
-            return ResponseEntity.status(500).body("Error interno al obtener el listado del establecimiento: " + excepcion.getMessage());
+            return ResponseEntity.ok(citasDelLocal);
+        } catch (Exception excepcionConsulta) {
+            return ResponseEntity.status(500).body("Error al obtener las citas del local: " + excepcionConsulta.getMessage());
         }
     }
 }

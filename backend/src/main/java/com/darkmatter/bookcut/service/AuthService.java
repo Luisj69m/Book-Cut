@@ -4,81 +4,74 @@ import com.darkmatter.bookcut.model.PasswordResetToken;
 import com.darkmatter.bookcut.model.Usuario;
 import com.darkmatter.bookcut.repository.PasswordResetTokenRepository;
 import com.darkmatter.bookcut.repository.UsuarioRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Random;
 
-/**
- * Servicio encargado de la lógica de autenticación extendida.
- * Gestiona el flujo de recuperación de contraseñas mediante tokens temporales
- * y la comunicación con el servicio de mensajería.
- */
 @Service
 public class AuthService {
 
-    private final UsuarioRepository repositorioUsuario;
-    private final PasswordResetTokenRepository repositorioToken;
-    private final EmailService servicioEmail;
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
-    public AuthService(UsuarioRepository repositorioUsuario,
-                       PasswordResetTokenRepository repositorioToken,
-                       EmailService servicioEmail) {
-        this.repositorioUsuario = repositorioUsuario;
-        this.repositorioToken = repositorioToken;
-        this.servicioEmail = servicioEmail;
-    }
+    @Autowired
+    private PasswordResetTokenRepository tokenRepository;
+    @Autowired
+    private EmailService emailService;
+
+    // Aquí inyectarás tu servicio de email cuando lo tengas listo
+    // @Autowired
+    // private EmailService emailService;
 
     /**
-     * Genera un código de verificación de 6 dígitos, invalida tokens previos
-     * y dispara el envío del correo electrónico de recuperación.
-     *
-     * @param correo Correo electrónico del usuario que solicita el cambio.
+     * Paso 1: Generar el token de 6 dígitos y guardarlo asociado al usuario.
      */
     @Transactional
     public void crearTokenRecuperacion(String correo) {
-        Usuario usuario = repositorioUsuario.findByCorreoElectronico(correo)
+        Usuario usuario = usuarioRepository.findByCorreoElectronico(correo)
                 .orElseThrow(() -> new RuntimeException("No existe ningún usuario con el correo: " + correo));
 
-        // Limpieza de intentos previos para evitar colisiones
-        repositorioToken.deleteByUsuarioVinculado(usuario);
-        repositorioToken.flush();
+        tokenRepository.deleteByUsuario(usuario);
+        tokenRepository.flush();
 
-        // Generación de código numérico de 6 cifras
-        String codigoGenerado = String.format("%06d", new Random().nextInt(999999));
+        String token = String.format("%06d", new Random().nextInt(999999));
 
-        PasswordResetToken tokenSeguridad = new PasswordResetToken(codigoGenerado, usuario);
-        repositorioToken.save(tokenSeguridad);
+        PasswordResetToken resetToken = new PasswordResetToken(token, usuario);
+        tokenRepository.save(resetToken);
 
-        // Notificación al usuario vía EmailService
-        servicioEmail.enviarCorreoRecuperacion(correo, codigoGenerado);
+        // Llamada al servicio real
+        emailService.enviarCorreoRecuperacion(correo, token);
+
+        System.out.println("DEBUG: El código para " + correo + " es: " + token);
     }
 
     /**
-     * Valida la vigencia y veracidad del token proporcionado para actualizar
-     * las credenciales de acceso del usuario.
-     *
-     * @param codigoToken Código de 6 dígitos enviado al usuario.
-     * @param nuevaContrasena Nueva clave de acceso en texto plano (procesada antes de persistir).
+     * Paso 2: Validar el token y cambiar la contraseña.
      */
     @Transactional
-    public void cambiarContrasenaConToken(String codigoToken, String nuevaContrasena) {
-        PasswordResetToken tokenEncontrado = repositorioToken.findByCodigoToken(codigoToken)
+    public void cambiarContrasenaConToken(String token, String nuevaContrasena) {
+        // Buscamos si el código existe
+        PasswordResetToken resetToken = tokenRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("El código introducido no es válido"));
 
-        // Verificación de la ventana temporal de 15 minutos
-        if (tokenEncontrado.estaExpirado()) {
-            repositorioToken.delete(tokenEncontrado);
+        // Comprobamos si han pasado los 15 minutos
+        if (resetToken.estaExpirado()) {
+            tokenRepository.delete(resetToken);
             throw new RuntimeException("El código ha caducado. Solicita uno nuevo");
         }
 
-        Usuario usuario = tokenEncontrado.getUsuarioVinculado();
+        // Obtenemos al usuario y actualizamos su contraseña
+        Usuario usuario = resetToken.getUsuario();
 
-        // Actualización de credenciales
+        // Si más adelante usas BCrypt, aquí pondrías:
+        // usuario.setContrasenaUsuario(passwordEncoder.encode(nuevaContrasena));
         usuario.setContrasenaUsuario(nuevaContrasena);
-        repositorioUsuario.save(usuario);
 
-        // Consumo del token para evitar reutilización malintencionada
-        repositorioToken.delete(tokenEncontrado);
+        usuarioRepository.save(usuario);
+
+        // Una vez usada, borramos el token por seguridad
+        tokenRepository.delete(resetToken);
     }
 }

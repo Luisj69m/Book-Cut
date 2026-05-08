@@ -4,14 +4,8 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * Entidad JPA que representa una reserva en el sistema.
- * El campo precioFinal es crítico: congela el precio del servicio en el momento
- * en que la cita es aceptada para proteger la coherencia de la facturación.
- */
 @Entity
 @Table(name = "tabla_citas")
 public class Cita {
@@ -33,7 +27,7 @@ public class Cita {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "identificador_servicio")
-    private Servicio servicioContratado;
+    private Servicio servicioContratado;;
 
     @Column(name = "fecha_hora_cita", nullable = false)
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss[.SSS]", timezone = "Europe/Madrid")
@@ -44,7 +38,7 @@ public class Cita {
     private EstadoCita estadoCita;
 
     @Column(name = "precio_final", precision = 10, scale = 2)
-    private BigDecimal precioFinal;
+    private java.math.BigDecimal precioFinal;
 
     public Cita() {
     }
@@ -105,11 +99,12 @@ public class Cita {
         this.estadoCita = estadoCita;
     }
 
-    public BigDecimal getPrecioFinal() {
+    public java.math.BigDecimal getPrecioFinal() {
         return precioFinal;
     }
 
-    public void setPrecioFinal(BigDecimal precioFinal) {
+    public void setPrecioFinal(java.math.BigDecimal precioFinal) {
         this.precioFinal = precioFinal;
     }
+
 }

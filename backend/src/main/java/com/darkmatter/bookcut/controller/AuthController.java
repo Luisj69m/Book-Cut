@@ -4,6 +4,7 @@ import com.darkmatter.bookcut.model.Usuario;
 import com.darkmatter.bookcut.repository.UsuarioRepository;
 import com.darkmatter.bookcut.security.JwtUtils;
 import com.darkmatter.bookcut.service.AuthService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,75 +12,77 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Controlador para la autenticación y recuperación de credenciales.
- */
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final UsuarioRepository repositorioUsuarios;
-    private final JwtUtils utilidadesJwt;
-    private final AuthService servicioAutenticacion;
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
-    public AuthController(UsuarioRepository repositorioUsuarios, JwtUtils utilidadesJwt, AuthService servicioAutenticacion) {
-        this.repositorioUsuarios = repositorioUsuarios;
-        this.utilidadesJwt = utilidadesJwt;
-        this.servicioAutenticacion = servicioAutenticacion;
-    }
+    @Autowired
+    private JwtUtils jwtUtils;
+    @Autowired
+    private AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<?> iniciarSesion(@RequestBody Map<String, String> peticionLogin) {
-        String correoElectronico = peticionLogin.get("correoElectronico");
-        String contrasena = peticionLogin.get("contrasena");
+    public ResponseEntity<?> login(@RequestBody Map<String, String> loginRequest) {
+        String correo = loginRequest.get("correoElectronico");
+        String password = loginRequest.get("contrasena");
 
-        Optional<Usuario> usuarioOpcional = repositorioUsuarios.findByCorreoElectronico(correoElectronico);
+        // 1. Buscamos al usuario por correo
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByCorreoElectronico(correo);
 
-        if (usuarioOpcional.isPresent()) {
-            Usuario usuario = usuarioOpcional.get();
+        if (usuarioOpt.isPresent()) {
+            Usuario usuario = usuarioOpt.get();
 
-            // TODO: Migrar a BCryptPasswordEncoder para validación segura
-            if (usuario.getContrasenaUsuario().equals(contrasena)) {
-                String token = utilidadesJwt.generarToken(usuario.getCorreoElectronico(), usuario.getRolUsuario().name());
+            // 2. Comprobamos la contraseña (aquí deberías usar BCrypt si estuvieran cifradas)
+            if (usuario.getContrasenaUsuario().equals(password)) {
 
-                Map<String, Object> respuesta = new HashMap<>();
-                respuesta.put("token", token);
-                respuesta.put("idUsuario", usuario.getIdUsuario());
-                respuesta.put("correoElectronico", usuario.getCorreoElectronico());
-                respuesta.put("rol", usuario.getRolUsuario().name());
+                // 3. Generamos el Token JWT
+                String token = jwtUtils.generarToken(usuario.getCorreoElectronico(), usuario.getRolUsuario().name());
+                // 4. Preparamos la respuesta que Dani espera
+                Map<String, Object> response = new HashMap<>();
+                response.put("token", token);
+                response.put("idUsuario", usuario.getIdUsuario());
+                response.put("correoElectronico", usuario.getCorreoElectronico());
+                response.put("rol", usuario.getRolUsuario().name());
 
-                return ResponseEntity.ok(respuesta);
+                return ResponseEntity.ok(response);
             }
         }
 
-        return ResponseEntity.status(401).body("Error: Correo electrónico o contraseña incorrectos");
+        // Si algo falla, devolvemos un 401 (No autorizado)
+        return ResponseEntity.status(401).body("Error: Correo o contraseña incorrectos");
     }
 
     @PostMapping("/solicitar-recuperacion")
-    public ResponseEntity<String> solicitarRecuperacion(@RequestBody Map<String, String> peticion) {
+    public ResponseEntity<String> solicitar(@RequestBody Map<String, String> request) {
         try {
-            String correoElectronico = peticion.get("correoElectronico");
-            servicioAutenticacion.crearTokenRecuperacion(correoElectronico);
+            String correo = request.get("correoElectronico");
+            // Lógica para generar token y enviar mail
+            authService.crearTokenRecuperacion(correo);
             return ResponseEntity.ok("Si el correo existe, se ha enviado un código de recuperación.");
-        } catch (Exception excepcion) {
-            return ResponseEntity.badRequest().body("Error: " + excepcion.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
 
     @PostMapping("/confirmar-recuperacion")
-    public ResponseEntity<String> confirmarRecuperacion(@RequestBody Map<String, String> peticion) {
+    public ResponseEntity<String> confirmar(@RequestBody Map<String, String> request) {
         try {
-            String token = peticion.get("codigo");
-            String nuevaContrasena = peticion.get("nuevaContrasena");
+            // Dani manda "codigo", así que buscamos "codigo"
+            String token = request.get("codigo");
+            String nuevaPass = request.get("nuevaContrasena");
 
-            if (token == null || nuevaContrasena == null) {
-                return ResponseEntity.badRequest().body("Faltan datos obligatorios (código o nueva contraseña)");
+            if (token == null || nuevaPass == null) {
+                return ResponseEntity.badRequest().body("Faltan datos en el envío (codigo o nuevaContrasena)");
             }
 
-            servicioAutenticacion.cambiarContrasenaConToken(token, nuevaContrasena);
+            authService.cambiarContrasenaConToken(token, nuevaPass);
             return ResponseEntity.ok("Contraseña actualizada con éxito.");
-        } catch (Exception excepcion) {
-            return ResponseEntity.badRequest().body("Error: " + excepcion.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
 }

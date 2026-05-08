@@ -3,174 +3,206 @@ package com.darkmatter.bookcut.service;
 import com.darkmatter.bookcut.DTO.CitaResponseDTO;
 import com.darkmatter.bookcut.DTO.ServicioDTO;
 import com.darkmatter.bookcut.model.Cita;
-import com.darkmatter.bookcut.model.EstadoCita;
 import com.darkmatter.bookcut.repository.CitaRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-/**
- * Servicio central para la gestión del ciclo de vida de las citas.
- * Incluye el motor de validación de solapamiento horario y la máquina de estados
- * que rige las transiciones permitidas (Pendiente, Aceptada, etc.).
- */
 @Service
 public class CitaService {
 
-    private final CitaRepository repositorioCitas;
-    private final EmailService servicioEmail;
+    private final CitaRepository repositorioDeCitas;
+    private final EmailService emailService;
 
-    public CitaService(CitaRepository repositorioCitas, EmailService servicioEmail) {
-        this.repositorioCitas = repositorioCitas;
-        this.servicioEmail = servicioEmail;
+    // Constructor para la inyección de dependencias
+    public CitaService(CitaRepository repositorioDeCitas, EmailService emailService) {
+        this.repositorioDeCitas = repositorioDeCitas;
+        this.emailService = emailService;
     }
 
-    /**
-     * Registra una nueva cita verificando que el barbero no tenga compromisos
-     * previos que se solapen en el rango de tiempo calculado.
-     */
-    @Transactional
     public Cita crearNuevaCita(Cita nuevaCita) {
         LocalDateTime inicioNuevaCita = nuevaCita.getFechaHoraCita();
-        int duracionMinutos = nuevaCita.getServicioContratado().getDuracionMinutos();
-        LocalDateTime finNuevaCita = inicioNuevaCita.plusMinutes(duracionMinutos);
+        int duracionNuevaCita = nuevaCita.getServicioContratado().getDuracionMinutos();
+        LocalDateTime finNuevaCita = inicioNuevaCita.plusMinutes(duracionNuevaCita);
 
         LocalDateTime inicioDelDia = inicioNuevaCita.toLocalDate().atStartOfDay();
         LocalDateTime finDelDia = inicioDelDia.plusDays(1).minusNanos(1);
 
-        // Validamos disponibilidad horaria
-        List<Cita> citasDelDia = repositorioCitas.findByBarberoAsignadoAndFechaHoraCitaBetween(
+        List<Cita> citasDelDia = repositorioDeCitas.findByBarberoAsignadoAndFechaHoraCitaBetween(
                 nuevaCita.getBarberoAsignado(), inicioDelDia, finDelDia);
 
         for (Cita citaExistente : citasDelDia) {
-            if (citaExistente.getEstadoCita() == EstadoCita.CANCELADA) continue;
+            if (citaExistente.getEstadoCita() == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+                continue;
+            }
 
             LocalDateTime inicioExistente = citaExistente.getFechaHoraCita();
             int duracionExistente = citaExistente.getServicioContratado().getDuracionMinutos();
             LocalDateTime finExistente = inicioExistente.plusMinutes(duracionExistente);
 
             if (inicioNuevaCita.isBefore(finExistente) && finNuevaCita.isAfter(inicioExistente)) {
-                throw new RuntimeException("Error: El barbero ya tiene una cita asignada hasta las " + finExistente.toLocalTime());
+                throw new RuntimeException("Error: El servicio se solapa con una cita que dura hasta las " + finExistente.toLocalTime());
             }
         }
 
-        Cita citaGuardada = repositorioCitas.save(nuevaCita);
+        Cita citaGuardada = repositorioDeCitas.save(nuevaCita);
 
-        // Notificación de reserva al cliente
+        java.time.format.DateTimeFormatter formateador = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy 'a las' HH:mm");
+        String fechaFormateada = citaGuardada.getFechaHoraCita().format(formateador);
+
         try {
-            DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd/MM/yyyy 'a las' HH:mm");
-            String fechaTexto = citaGuardada.getFechaHoraCita().format(formateador);
-            servicioEmail.enviarCorreoConfirmacion(citaGuardada.getClienteReserva().getCorreoElectronico(), fechaTexto);
-        } catch (Exception e) {
-            // Error no crítico para la persistencia
+            emailService.enviarCorreoConfirmacion(citaGuardada.getClienteReserva().getCorreoElectronico(), fechaFormateada);
+        } catch (Exception excepcionCorreo) {
+            System.out.println("ERROR al enviar correo: " + excepcionCorreo.getMessage());
         }
 
         return citaGuardada;
     }
 
-    /**
-     * Gestiona las transiciones de estado de una cita aplicando reglas de negocio estrictas.
-     */
-    @Transactional
-    public Cita actualizarEstadoCita(Long idCita, String nuevoEstadoTexto) {
-        Cita cita = repositorioCitas.findById(idCita)
+    public List<Cita> obtenerHistorialDeCliente(Long idUsuario) {
+        return repositorioDeCitas.findByClienteReserva_IdUsuario(idUsuario);
+    }
+
+    public boolean estaBarberoDisponible(Long idBarbero, java.time.LocalDateTime fechaHora) {
+        return !repositorioDeCitas.existsByBarberoAsignado_IdPerfilBarberoAndFechaHoraCita(idBarbero, fechaHora);
+    }
+
+    public void cancelarCita(Long idCita) {
+        Cita cita = repositorioDeCitas.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
-        EstadoCita estadoActual = cita.getEstadoCita();
-        EstadoCita estadoSolicitado = EstadoCita.valueOf(nuevoEstadoTexto.toUpperCase());
-
-        // 1. Validaciones de estados terminales
-        if (List.of(EstadoCita.COMPLETADA, EstadoCita.CANCELADA, EstadoCita.RECHAZADA, EstadoCita.VENCIDA).contains(estadoActual)) {
-            throw new RuntimeException("Error: La cita ya se encuentra en un estado definitivo: " + estadoActual);
+        if (cita.getEstadoCita() == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA || cita.getEstadoCita() == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+            throw new RuntimeException("No se puede cancelar una cita que ya está " + cita.getEstadoCita());
         }
 
-        // 2. Restricciones de transición
-        if (estadoActual == EstadoCita.PENDIENTE && !List.of(EstadoCita.ACEPTADA, EstadoCita.RECHAZADA, EstadoCita.CANCELADA).contains(estadoSolicitado)) {
-            throw new RuntimeException("Transición no permitida para citas PENDIENTES.");
-        }
+        // Cambiamos estado en lugar de borrar
+        cita.setEstadoCita(com.darkmatter.bookcut.model.EstadoCita.CANCELADA);
+        repositorioDeCitas.save(cita);
 
-        if (estadoActual == EstadoCita.ACEPTADA && !List.of(EstadoCita.COMPLETADA, EstadoCita.CANCELADA).contains(estadoSolicitado)) {
-            throw new RuntimeException("Transición no permitida para citas ACEPTADAS.");
-        }
-
-        // 3. Lógica de negocio específica por estado solicitado
-        if (estadoSolicitado == EstadoCita.ACEPTADA) {
-            // Congelamos el precio en el momento de la aceptación
-            if (cita.getServicioContratado() != null) {
-                cita.setPrecioFinal(cita.getServicioContratado().getPrecioServicio());
-            }
-        }
-
-        if (estadoSolicitado == EstadoCita.COMPLETADA && LocalDateTime.now().isBefore(cita.getFechaHoraCita())) {
-            throw new RuntimeException("Error: No se puede completar una cita antes de su fecha programada.");
-        }
-
-        cita.setEstadoCita(estadoSolicitado);
-        Cita actualizada = repositorioCitas.save(cita);
-
-        notificarCambioEstado(actualizada, estadoSolicitado);
-
-        return actualizada;
+        // Enviar correo (el código que ya tienes)
+        emailService.enviarCorreo(cita.getClienteReserva().getCorreoElectronico(),
+                "Cancelación", "Tu cita ahora figura como CANCELADA.");
     }
 
-    /**
-     * Método de conveniencia para cancelar una cita desde el controlador.
-     * Delega en la lógica central de actualización de estados.
-     */
-    @Transactional
-    public void cancelarCita(Long idCita) {
-        this.actualizarEstadoCita(idCita, "CANCELADA");
-    }
-
-    private void notificarCambioEstado(Cita cita, EstadoCita estado) {
-        String asunto = "Actualización de tu cita - Book&Cut";
-        String mensaje = switch (estado) {
-            case ACEPTADA -> "Tu cita ha sido aceptada por el barbero.";
-            case RECHAZADA -> "Lo sentimos, el barbero ha rechazado tu solicitud.";
-            case COMPLETADA -> "Tu cita ha finalizado correctamente. ¡Gracias!";
-            case CANCELADA -> "Tu cita ha sido cancelada.";
-            default -> "";
-        };
-
-        if (!mensaje.isEmpty()) {
-            try {
-                servicioEmail.enviarCorreo(cita.getClienteReserva().getCorreoElectronico(), asunto, mensaje);
-            } catch (Exception ignored) {}
-        }
+    public List<Cita> obtenerCitasPorBarbero(Long idBarbero) {
+        return repositorioDeCitas.findByBarberoAsignado_IdPerfilBarbero(idBarbero);
     }
 
     public List<CitaResponseDTO> obtenerCitasPorUsuarioDTO(Long idUsuario) {
-        return repositorioCitas.findByClienteReserva_IdUsuario(idUsuario).stream()
+        List<Cita> citas = repositorioDeCitas.findByClienteReserva_IdUsuario(idUsuario);
+        return citas.stream()
                 .map(this::convertirADto)
                 .toList();
     }
 
-    private CitaResponseDTO convertirADto(Cita cita) {
-        CitaResponseDTO respuesta = new CitaResponseDTO();
-        respuesta.setIdCita(cita.getIdCita());
-        respuesta.setFechaHoraCita(cita.getFechaHoraCita());
-        respuesta.setEstadoCita(cita.getEstadoCita());
+    public Cita actualizarEstadoCita(Long idCita, String nuevoEstado) {
+        Cita cita = repositorioDeCitas.findById(idCita)
+                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
-        ServicioDTO servicio = new ServicioDTO();
-        servicio.setNombre(cita.getServicioContratado().getNombreServicio());
-        if (cita.getServicioContratado().getPrecioServicio() != null) {
-            servicio.setPrecio(cita.getServicioContratado().getPrecioServicio().doubleValue());
+        com.darkmatter.bookcut.model.EstadoCita estadoActual = cita.getEstadoCita();
+        com.darkmatter.bookcut.model.EstadoCita estadoSolicitado = com.darkmatter.bookcut.model.EstadoCita.valueOf(nuevoEstado.toUpperCase());
+
+        if (estadoActual == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA
+                || estadoActual == com.darkmatter.bookcut.model.EstadoCita.CANCELADA
+                || estadoActual == com.darkmatter.bookcut.model.EstadoCita.RECHAZADA
+                || estadoActual == com.darkmatter.bookcut.model.EstadoCita.VENCIDA) {
+            throw new RuntimeException("Error: Una cita " + estadoActual + " es definitiva y no puede cambiar de estado.");
         }
-        servicio.setDuracionMinutos(cita.getServicioContratado().getDuracionMinutos());
 
-        respuesta.setServicioContratado(servicio);
-
-        if (cita.getBarberoAsignado() != null && cita.getBarberoAsignado().getBarberiaAsignada() != null) {
-            respuesta.setNombreBarberia(cita.getBarberoAsignado().getBarberiaAsignada().getNombre());
+        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.VENCIDA) {
+            throw new RuntimeException("Error: El estado VENCIDA solo se asigna automáticamente por el sistema.");
         }
-        return respuesta;
+
+        if (estadoActual == com.darkmatter.bookcut.model.EstadoCita.PENDIENTE) {
+            if (estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.ACEPTADA
+                    && estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.RECHAZADA
+                    && estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+                throw new RuntimeException("Error: Una cita PENDIENTE solo puede pasar a ACEPTADA, RECHAZADA o CANCELADA.");
+            }
+        }
+
+        if (estadoActual == com.darkmatter.bookcut.model.EstadoCita.ACEPTADA) {
+            if (estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.COMPLETADA
+                    && estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+                throw new RuntimeException("Error: Una cita ACEPTADA solo puede pasar a COMPLETADA o CANCELADA.");
+            }
+        }
+
+        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA) {
+            if (java.time.LocalDateTime.now().isBefore(cita.getFechaHoraCita())) {
+                throw new RuntimeException("Error: No se puede finalizar una cita antes de que ocurra.");
+            }
+        }
+
+        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+            if (java.time.LocalDateTime.now().isAfter(cita.getFechaHoraCita())) {
+                throw new RuntimeException("Error: No se puede cancelar una cita cuya fecha ya ha pasado.");
+            }
+        }
+
+        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.ACEPTADA) {
+            if (cita.getServicioContratado() != null && cita.getServicioContratado().getPrecioServicio() != null) {
+                cita.setPrecioFinal(cita.getServicioContratado().getPrecioServicio());
+            }
+        }
+
+        cita.setEstadoCita(estadoSolicitado);
+        Cita citaActualizada = repositorioDeCitas.save(cita);
+
+        String asuntoCorreo = "";
+        String mensajeCorreo = "";
+
+        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.ACEPTADA) {
+            asuntoCorreo = "Cita Confirmada - Book&Cut";
+            mensajeCorreo = "Hola, tu barbero ha aceptado tu cita.";
+        } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.RECHAZADA) {
+            asuntoCorreo = "Cita Rechazada - Book&Cut";
+            mensajeCorreo = "Hola, el barbero ha rechazado tu solicitud.";
+        } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA) {
+            asuntoCorreo = "Cita Completada - Book&Cut";
+            mensajeCorreo = "Hola, tu cita ha sido finalizada correctamente. Gracias por confiar en nosotros.";
+        } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+            asuntoCorreo = "Cita Cancelada - Book&Cut";
+            mensajeCorreo = "Hola, tu cita ha sido cancelada.";
+        }
+
+        if (!asuntoCorreo.isEmpty()) {
+            try {
+                emailService.enviarCorreo(citaActualizada.getClienteReserva().getCorreoElectronico(), asuntoCorreo, mensajeCorreo);
+            } catch (Exception excepcionCorreo) {
+                System.err.println("Error al enviar correo: " + excepcionCorreo.getMessage());
+            }
+        }
+
+        return citaActualizada;
     }
 
-    // Métodos de consulta simples
-    public List<Cita> obtenerHistorialDeCliente(Long idUsuario) { return repositorioCitas.findByClienteReserva_IdUsuario(idUsuario); }
-    public List<Cita> obtenerCitasPorBarbero(Long idBarbero) { return repositorioCitas.findByBarberoAsignado_IdPerfilBarbero(idBarbero); }
-    public boolean estaBarberoDisponible(Long idBarbero, LocalDateTime fecha) { return !repositorioCitas.existsByBarberoAsignado_IdPerfilBarberoAndFechaHoraCita(idBarbero, fecha); }
+    private CitaResponseDTO convertirADto(Cita cita) {
+        CitaResponseDTO dto = new CitaResponseDTO();
+        dto.setIdCita(cita.getIdCita());
+        dto.setFechaHoraCita(cita.getFechaHoraCita());
+        dto.setEstadoCita(cita.getEstadoCita());
+
+        ServicioDTO servicioDto = new ServicioDTO();
+
+        // Nombres corregidos según tu Servicio.java
+        servicioDto.setNombre(cita.getServicioContratado().getNombreServicio());
+
+        // Convertimos BigDecimal a Double para el DTO
+        if (cita.getServicioContratado().getPrecioServicio() != null) {
+            servicioDto.setPrecio(cita.getServicioContratado().getPrecioServicio().doubleValue());
+        }
+
+        servicioDto.setDuracionMinutos(cita.getServicioContratado().getDuracionMinutos());
+
+        dto.setServicioContratado(servicioDto);
+
+        if (cita.getBarberoAsignado() != null && cita.getBarberoAsignado().getBarberiaAsignada() != null) {
+            dto.setNombreBarberia(cita.getBarberoAsignado().getBarberiaAsignada().getNombre());
+        }
+        return dto;
+    }
+
 }
