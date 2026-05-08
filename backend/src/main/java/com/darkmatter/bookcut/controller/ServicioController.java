@@ -41,7 +41,7 @@ public class ServicioController {
             Optional<Barberia> barberiaEncontrada = repositorioBarberias.findById(idBarberia);
 
             if (barberiaEncontrada.isPresent()) {
-                nuevoServicio.setBarberia(barberiaEncontrada.get());
+                nuevoServicio.setBarberiaAsignada(barberiaEncontrada.get());
                 Servicio servicioGuardado = repositorioServicios.save(nuevoServicio);
                 return ResponseEntity.ok(servicioGuardado);
             } else {
@@ -92,7 +92,7 @@ public class ServicioController {
     @GetMapping("/barberia/{idBarberia}")
     public ResponseEntity<?> obtenerServiciosPorBarberia(@PathVariable Long idBarberia) {
         try {
-            List<Servicio> listadoServicios = repositorioServicios.findByBarberia_IdBarberia(idBarberia);
+            List<Servicio> listadoServicios = repositorioServicios.findByBarberiaAsignada_IdBarberia(idBarberia);
             if (listadoServicios.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
