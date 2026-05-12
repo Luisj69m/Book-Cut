@@ -88,6 +88,7 @@ public class UsuarioController {
             return org.springframework.http.ResponseEntity.ok("Si el correo existe, se enviaran instrucciones.");
         } catch (Exception excepcionCorreo) {
             System.out.println("Error SMTP en recuperacion: " + excepcionCorreo.getMessage());
+            excepcionCorreo.printStackTrace();
             return org.springframework.http.ResponseEntity.status(500).body("Error interno al intentar enviar el correo.");
         }
     }
