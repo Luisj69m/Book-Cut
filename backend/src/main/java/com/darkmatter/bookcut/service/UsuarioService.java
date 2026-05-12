@@ -89,7 +89,7 @@ public class UsuarioService {
         baseDeDatosDirecta.update(instruccionSql, usuario.getIdUsuario(), codigoRecuperacion, LocalDateTime.now().plusMinutes(15));
 
         org.springframework.mail.SimpleMailMessage mensaje = new org.springframework.mail.SimpleMailMessage();
-        mensaje.setFrom("soporte@bookcut.com");
+        mensaje.setFrom("bookcut2026@gmail.com");
         mensaje.setTo(correoDestino);
         mensaje.setSubject("Código de recuperación de contraseña");
         mensaje.setText("Tu código para recuperar la contraseña es: " + codigoRecuperacion);
