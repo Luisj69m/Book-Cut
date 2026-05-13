@@ -15,10 +15,10 @@ import java.util.List;
 public class CitaService {
 
     private final CitaRepository repositorioDeCitas;
-    private final EmailService emailService;
+    private final BrevoEmailService emailService;
 
     // Constructor para la inyección de dependencias
-    public CitaService(CitaRepository repositorioDeCitas, EmailService emailService) {
+    public CitaService(CitaRepository repositorioDeCitas, BrevoEmailService emailService) {
         this.repositorioDeCitas = repositorioDeCitas;
         this.emailService = emailService;
     }
@@ -85,8 +85,15 @@ public class CitaService {
         cita.setEstadoCita(EstadoCita.CANCELADA);
         repositorioDeCitas.save(cita);
 
-        emailService.enviarCorreo(cita.getClienteReserva().getCorreoElectronico(),
-                "Cancelación", "Tu cita ahora figura como CANCELADA.");
+        try {
+            emailService.enviarCorreo(
+                    cita.getClienteReserva().getCorreoElectronico(),
+                    "Cita cancelada",
+                    "Tu cita ha sido cancelada."
+            );
+        } catch (Exception e) {
+            System.out.println("Error enviando correo de cancelación: " + e.getMessage());
+        }
     }
 
     public List<Cita> obtenerCitasPorBarbero(Long idBarbero) {

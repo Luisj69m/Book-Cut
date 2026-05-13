@@ -19,7 +19,7 @@ public class AuthService {
     @Autowired
     private PasswordResetTokenRepository tokenRepository;
     @Autowired
-    private EmailService emailService;
+    private BrevoEmailService emailService;
 
     // Aquí inyectarás tu servicio de email cuando lo tengas listo
     // @Autowired
@@ -29,7 +29,7 @@ public class AuthService {
      * Paso 1: Generar el token de 6 dígitos y guardarlo asociado al usuario.
      */
     @Transactional
-    public void crearTokenRecuperacion(String correo) {
+    public String crearTokenRecuperacion(String correo) {
         Usuario usuario = usuarioRepository.findByCorreoElectronico(correo)
                 .orElseThrow(() -> new RuntimeException("No existe ningún usuario con el correo: " + correo));
 
@@ -41,10 +41,9 @@ public class AuthService {
         PasswordResetToken resetToken = new PasswordResetToken(token, usuario);
         tokenRepository.save(resetToken);
 
-        // Llamada al servicio real
-        emailService.enviarCorreoRecuperacion(correo, token);
-
         System.out.println("DEBUG: El código para " + correo + " es: " + token);
+
+        return token;
     }
 
     /**

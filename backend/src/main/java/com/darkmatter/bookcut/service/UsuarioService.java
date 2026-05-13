@@ -2,12 +2,14 @@ package com.darkmatter.bookcut.service;
 
 import com.darkmatter.bookcut.DTO.PerfilRequestDTO;
 import com.darkmatter.bookcut.DTO.PerfilResponseDTO;
+import com.darkmatter.bookcut.model.RolUsuario;
 import com.darkmatter.bookcut.model.Usuario;
 import com.darkmatter.bookcut.repository.CitaRepository;
 import com.darkmatter.bookcut.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -17,19 +19,23 @@ import java.util.UUID;
 @Service
 public class UsuarioService {
 
+    @Autowired
     private final UsuarioRepository usuarioRepository;
     private final CitaRepository citaRepository;
-    private final org.springframework.mail.javamail.JavaMailSender enviadorDeCorreos;
+    @Autowired
+    private BrevoEmailService brevoEmailService;
+    @Autowired
+    private AuthService authService;
     private final JdbcTemplate baseDeDatosDirecta;
+
 
     @Autowired
     public UsuarioService(UsuarioRepository usuarioRepository,
                           CitaRepository citaRepository,
-                          org.springframework.mail.javamail.JavaMailSender enviadorDeCorreos,
+                          JavaMailSender enviadorDeCorreos,
                           JdbcTemplate baseDeDatosDirecta) {
         this.usuarioRepository = usuarioRepository;
         this.citaRepository = citaRepository;
-        this.enviadorDeCorreos = enviadorDeCorreos;
         this.baseDeDatosDirecta = baseDeDatosDirecta;
     }
 
@@ -37,7 +43,7 @@ public class UsuarioService {
         if (usuarioRepository.findByCorreoElectronico(nuevoUsuario.getCorreoElectronico()).isPresent()) {
             throw new RuntimeException("El correo electronico ya esta registrado");
         }
-        nuevoUsuario.setRolUsuario(com.darkmatter.bookcut.model.RolUsuario.CLIENTE);
+        nuevoUsuario.setRolUsuario(RolUsuario.CLIENTE);
         return usuarioRepository.save(nuevoUsuario);
     }
 
@@ -77,24 +83,23 @@ public class UsuarioService {
         usuarioRepository.deleteById(idUsuario);
     }
 
-    public void enviarEmailRecuperacion(String correoDestino) {
+    public void enviarEmailRecuperacion(String correoDestino) throws Exception {
+        // Buscar usuario
         Usuario usuario = usuarioRepository.findByCorreoElectronico(correoDestino)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        String codigoRecuperacion = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        // Generar código
+        String codigoRecuperacion = authService.crearTokenRecuperacion(correoDestino);
 
-        String instruccionSql = "INSERT INTO tokens_restablecer_contrasena (id_usuario, token, fecha_expiracion) " +
-                "VALUES (?, ?, ?) ON CONFLICT (id_usuario) DO UPDATE SET token = EXCLUDED.token, fecha_expiracion = EXCLUDED.fecha_expiracion";
+        // Enviar correo
+        String asunto = "Recuperación de contraseña - BookCut";
+        String cuerpoHtml = "<html><body>" +
+                "<h2>Recuperación de contraseña</h2>" +
+                "<p>Tu código de recuperación es: <strong>" + codigoRecuperacion + "</strong></p>" +
+                "<p>Este código expira en 15 minutos.</p>" +
+                "</body></html>";
 
-        baseDeDatosDirecta.update(instruccionSql, usuario.getIdUsuario(), codigoRecuperacion, LocalDateTime.now().plusMinutes(15));
-
-        org.springframework.mail.SimpleMailMessage mensaje = new org.springframework.mail.SimpleMailMessage();
-        mensaje.setFrom("bookcut2026@gmail.com");
-        mensaje.setTo(correoDestino);
-        mensaje.setSubject("Código de recuperación de contraseña");
-        mensaje.setText("Tu código para recuperar la contraseña es: " + codigoRecuperacion);
-
-        enviadorDeCorreos.send(mensaje);
+        brevoEmailService.enviarCorreo(correoDestino, asunto, cuerpoHtml);
     }
 
     @Transactional
