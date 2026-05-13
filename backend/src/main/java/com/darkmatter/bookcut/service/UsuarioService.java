@@ -4,7 +4,9 @@ import com.darkmatter.bookcut.DTO.PerfilRequestDTO;
 import com.darkmatter.bookcut.DTO.PerfilResponseDTO;
 import com.darkmatter.bookcut.model.RolUsuario;
 import com.darkmatter.bookcut.model.Usuario;
+import com.darkmatter.bookcut.repository.BarberoRepository;
 import com.darkmatter.bookcut.repository.CitaRepository;
+import com.darkmatter.bookcut.repository.PasswordResetTokenRepository;
 import com.darkmatter.bookcut.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,10 @@ public class UsuarioService {
     @Autowired
     private AuthService authService;
     private final JdbcTemplate baseDeDatosDirecta;
+    @Autowired
+    private BarberoRepository barberoRepository;
+    @Autowired
+    private PasswordResetTokenRepository tokenRepository;
 
 
     @Autowired
@@ -79,8 +85,17 @@ public class UsuarioService {
 
     @Transactional
     public void eliminarCuentaDeUsuario(Long idUsuario) {
-        citaRepository.deleteByClienteReserva_IdUsuario(idUsuario);
-        usuarioRepository.deleteById(idUsuario);
+        Usuario usuario = usuarioRepository.findById(idUsuario)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // Si es BARBERO, eliminar primero su perfil de barbero
+        if (usuario.getRolUsuario() == RolUsuario.BARBERO) {
+            barberoRepository.findByUsuarioAsignadoIdUsuario(idUsuario)
+                    .ifPresent(barbero -> barberoRepository.delete(barbero));
+        }
+
+        // Ahora sí eliminar el usuario
+        usuarioRepository.delete(usuario);
     }
 
     public void enviarEmailRecuperacion(String correoDestino) throws Exception {
