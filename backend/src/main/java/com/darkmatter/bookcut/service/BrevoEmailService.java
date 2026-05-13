@@ -53,4 +53,72 @@ public class BrevoEmailService {
 
         enviarCorreo(destinatario, asunto, cuerpoHtml);
     }
+
+    public void enviarCorreoCitaCreada(String destinatario, String nombreCliente, String fechaHora, String nombreBarberia) throws Exception {
+        String asunto = "Cita solicitada - BookCut";
+        String cuerpoHtml = "<html><body>" +
+                "<h2>Hola " + nombreCliente + "</h2>" +
+                "<p>Tu solicitud de cita ha sido registrada correctamente.</p>" +
+                "<p><strong>Fecha y hora:</strong> " + fechaHora + "</p>" +
+                "<p><strong>Barbería:</strong> " + nombreBarberia + "</p>" +
+                "<p>Recibirás una notificación cuando tu cita sea confirmada.</p>" +
+                "</body></html>";
+
+        enviarCorreo(destinatario, asunto, cuerpoHtml);
+    }
+
+    public void enviarCorreoCitaAceptada(String destinatario, String nombreCliente, String fechaHora, String nombreBarberia) throws Exception {
+        String asunto = "Cita confirmada - BookCut";
+        String cuerpoHtml = "<html><body>" +
+                "<h2>¡Tu cita ha sido confirmada!</h2>" +
+                "<p>Hola " + nombreCliente + ",</p>" +
+                "<p>Tu cita ha sido aceptada.</p>" +
+                "<p><strong>Fecha y hora:</strong> " + fechaHora + "</p>" +
+                "<p><strong>Barbería:</strong> " + nombreBarberia + "</p>" +
+                "<p>Te esperamos.</p>" +
+                "</body></html>";
+
+        enviarCorreo(destinatario, asunto, cuerpoHtml);
+    }
+
+    public void enviarCorreoCitaRechazada(String destinatario, String nombreCliente, String fechaHora, String nombreBarberia) throws Exception {
+        String asunto = "Cita rechazada - BookCut";
+        String cuerpoHtml = "<html><body>" +
+                "<h2>Información sobre tu cita</h2>" +
+                "<p>Hola " + nombreCliente + ",</p>" +
+                "<p>Lamentamos informarte que tu cita no ha podido ser confirmada.</p>" +
+                "<p><strong>Fecha y hora solicitada:</strong> " + fechaHora + "</p>" +
+                "<p><strong>Barbería:</strong> " + nombreBarberia + "</p>" +
+                "<p>Te invitamos a solicitar una nueva cita en otro horario.</p>" +
+                "</body></html>";
+
+        enviarCorreo(destinatario, asunto, cuerpoHtml);
+    }
+
+    public void enviarCorreoCitaCancelada(String destinatario, String nombreCliente, String fechaHora, String nombreBarberia) throws Exception {
+        String asunto = "Cita cancelada - BookCut";
+        String cuerpoHtml = "<html><body>" +
+                "<h2>Cita cancelada</h2>" +
+                "<p>Hola " + nombreCliente + ",</p>" +
+                "<p>Tu cita ha sido cancelada.</p>" +
+                "<p><strong>Fecha y hora:</strong> " + fechaHora + "</p>" +
+                "<p><strong>Barbería:</strong> " + nombreBarberia + "</p>" +
+                "</body></html>";
+
+        enviarCorreo(destinatario, asunto, cuerpoHtml);
+    }
+
+    public void enviarCorreoCitaCompletada(String destinatario, String nombreCliente, String fechaHora, String nombreBarberia) throws Exception {
+        String asunto = "Cita completada - BookCut";
+        String cuerpoHtml = "<html><body>" +
+                "<h2>¡Gracias por tu visita!</h2>" +
+                "<p>Hola " + nombreCliente + ",</p>" +
+                "<p>Tu cita ha sido completada correctamente.</p>" +
+                "<p><strong>Fecha y hora:</strong> " + fechaHora + "</p>" +
+                "<p><strong>Barbería:</strong> " + nombreBarberia + "</p>" +
+                "<p>Esperamos verte pronto.</p>" +
+                "</body></html>";
+
+        enviarCorreo(destinatario, asunto, cuerpoHtml);
+    }
 }

@@ -161,29 +161,24 @@ public class CitaService {
         cita.setEstadoCita(estadoSolicitado);
         Cita citaActualizada = repositorioDeCitas.save(cita);
 
-        String asuntoCorreo = "";
-        String mensajeCorreo = "";
+        // Envío de correos según el nuevo estado
+        try {
+            String nombreCliente = citaActualizada.getClienteReserva().getNombre();
+            String correoCliente = citaActualizada.getClienteReserva().getCorreoElectronico();
+            String fechaHora = citaActualizada.getFechaHoraCita().toString();
+            String nombreBarberia = citaActualizada.getBarberoAsignado().getBarberiaAsignada().getNombre();
 
-        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.ACEPTADA) {
-            asuntoCorreo = "Cita Confirmada - Book&Cut";
-            mensajeCorreo = "Hola, tu barbero ha aceptado tu cita.";
-        } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.RECHAZADA) {
-            asuntoCorreo = "Cita Rechazada - Book&Cut";
-            mensajeCorreo = "Hola, el barbero ha rechazado tu solicitud.";
-        } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA) {
-            asuntoCorreo = "Cita Completada - Book&Cut";
-            mensajeCorreo = "Hola, tu cita ha sido finalizada correctamente. Gracias por confiar en nosotros.";
-        } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
-            asuntoCorreo = "Cita Cancelada - Book&Cut";
-            mensajeCorreo = "Hola, tu cita ha sido cancelada.";
-        }
-
-        if (!asuntoCorreo.isEmpty()) {
-            try {
-                emailService.enviarCorreo(citaActualizada.getClienteReserva().getCorreoElectronico(), asuntoCorreo, mensajeCorreo);
-            } catch (Exception excepcionCorreo) {
-                System.err.println("Error al enviar correo: " + excepcionCorreo.getMessage());
+            if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.ACEPTADA) {
+                emailService.enviarCorreoCitaAceptada(correoCliente, nombreCliente, fechaHora, nombreBarberia);
+            } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.RECHAZADA) {
+                emailService.enviarCorreoCitaRechazada(correoCliente, nombreCliente, fechaHora, nombreBarberia);
+            } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA) {
+                emailService.enviarCorreoCitaCompletada(correoCliente, nombreCliente, fechaHora, nombreBarberia);
+            } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+                emailService.enviarCorreoCitaCancelada(correoCliente, nombreCliente, fechaHora, nombreBarberia);
             }
+        } catch (Exception excepcionCorreo) {
+            System.err.println("Error al enviar correo: " + excepcionCorreo.getMessage());
         }
 
         return citaActualizada;
