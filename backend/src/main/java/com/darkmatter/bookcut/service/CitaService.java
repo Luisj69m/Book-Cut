@@ -16,6 +16,7 @@ public class CitaService {
 
     private final CitaRepository repositorioDeCitas;
     private final BrevoEmailService emailService;
+    private CitaResponseDTO citaResponseDTO;
 
     // Constructor para la inyección de dependencias
     public CitaService(CitaRepository repositorioDeCitas, BrevoEmailService emailService) {
@@ -103,7 +104,7 @@ public class CitaService {
     public List<CitaResponseDTO> obtenerCitasPorUsuarioDTO(Long idUsuario) {
         List<Cita> citas = repositorioDeCitas.findByClienteReserva_IdUsuario(idUsuario);
         return citas.stream()
-                .map(this::convertirADto)
+                .map(this::convertirACitaResponseDTO)
                 .toList();
     }
 
@@ -184,30 +185,33 @@ public class CitaService {
         return citaActualizada;
     }
 
-    private CitaResponseDTO convertirADto(Cita cita) {
+    public CitaResponseDTO convertirACitaResponseDTO(Cita cita) {
         CitaResponseDTO dto = new CitaResponseDTO();
+
         dto.setIdCita(cita.getIdCita());
         dto.setFechaHoraCita(cita.getFechaHoraCita());
         dto.setEstadoCita(cita.getEstadoCita());
+        dto.setPrecioFinal(cita.getPrecioFinal());
 
-        ServicioDTO servicioDto = new ServicioDTO();
+        // Cliente
+        dto.setIdCliente(cita.getClienteReserva().getIdUsuario());
+        dto.setNombreCliente(cita.getClienteReserva().getNombre());
+        dto.setCorreoCliente(cita.getClienteReserva().getCorreoElectronico());
 
-        // Nombres corregidos según tu Servicio.java
-        servicioDto.setNombre(cita.getServicioContratado().getNombreServicio());
+        // Barbero
+        dto.setIdPerfilBarbero(cita.getBarberoAsignado().getIdPerfilBarbero());
+        dto.setNombreBarbero(cita.getBarberoAsignado().getUsuarioAsignado().getNombre());
 
-        // Convertimos BigDecimal a Double para el DTO
-        if (cita.getServicioContratado().getPrecioServicio() != null) {
-            servicioDto.setPrecio(cita.getServicioContratado().getPrecioServicio().doubleValue());
-        }
+        // Barbería
+        dto.setIdBarberia(cita.getBarberoAsignado().getBarberiaAsignada().getIdBarberia());
+        dto.setNombreBarberia(cita.getBarberoAsignado().getBarberiaAsignada().getNombre());
 
-        servicioDto.setDuracionMinutos(cita.getServicioContratado().getDuracionMinutos());
+        // Servicio
+        dto.setIdServicio(cita.getServicioContratado().getIdServicio());
+        dto.setNombreServicio(cita.getServicioContratado().getNombreServicio());
+        dto.setPrecioServicio(cita.getServicioContratado().getPrecioServicio());
+        dto.setDuracionMinutos(cita.getServicioContratado().getDuracionMinutos());
 
-        dto.setServicioContratado(servicioDto);
-
-        if (cita.getBarberoAsignado() != null && cita.getBarberoAsignado().getBarberiaAsignada() != null) {
-            dto.setNombreBarberia(cita.getBarberoAsignado().getBarberiaAsignada().getNombre());
-        }
         return dto;
     }
-
 }

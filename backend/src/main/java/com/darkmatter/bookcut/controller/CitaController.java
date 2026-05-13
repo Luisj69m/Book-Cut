@@ -181,7 +181,12 @@ public class CitaController {
             if (listadoCompletoCitas.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
-            return ResponseEntity.ok(listadoCompletoCitas);
+
+            List<CitaResponseDTO> citasDTO = listadoCompletoCitas.stream()
+                    .map(cita -> citaService.convertirACitaResponseDTO(cita))
+                    .collect(java.util.stream.Collectors.toList());
+
+            return ResponseEntity.ok(citasDTO);
         } catch (Exception excepcionConsulta) {
             return ResponseEntity.status(500).body("Error al obtener el listado global de citas: " + excepcionConsulta.getMessage());
         }
@@ -194,9 +199,15 @@ public class CitaController {
             if (citasDelLocal.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
-            return ResponseEntity.ok(citasDelLocal);
+
+            List<CitaResponseDTO> citasDTO = citasDelLocal.stream()
+                    .map(cita -> citaService.convertirACitaResponseDTO(cita))
+                    .collect(java.util.stream.Collectors.toList());
+
+            return ResponseEntity.ok(citasDTO);
         } catch (Exception excepcionConsulta) {
             return ResponseEntity.status(500).body("Error al obtener las citas del local: " + excepcionConsulta.getMessage());
         }
     }
+
 }
