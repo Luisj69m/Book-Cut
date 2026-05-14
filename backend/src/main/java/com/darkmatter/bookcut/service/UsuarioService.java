@@ -2,6 +2,7 @@ package com.darkmatter.bookcut.service;
 
 import com.darkmatter.bookcut.DTO.PerfilRequestDTO;
 import com.darkmatter.bookcut.DTO.PerfilResponseDTO;
+import com.darkmatter.bookcut.model.PasswordResetToken;
 import com.darkmatter.bookcut.model.RolUsuario;
 import com.darkmatter.bookcut.model.Usuario;
 import com.darkmatter.bookcut.repository.BarberoRepository;
@@ -12,6 +13,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -33,6 +35,8 @@ public class UsuarioService {
     private BarberoRepository barberoRepository;
     @Autowired
     private PasswordResetTokenRepository tokenRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
 
     @Autowired
@@ -47,15 +51,25 @@ public class UsuarioService {
 
     public Usuario registrarNuevoUsuario(Usuario nuevoUsuario) {
         if (usuarioRepository.findByCorreoElectronico(nuevoUsuario.getCorreoElectronico()).isPresent()) {
-            throw new RuntimeException("El correo electronico ya esta registrado");
+            throw new RuntimeException("El correo ya está registrado");
         }
-        nuevoUsuario.setRolUsuario(RolUsuario.CLIENTE);
+
+        // Encriptar contraseña
+        nuevoUsuario.setContrasenaUsuario(passwordEncoder.encode(nuevoUsuario.getContrasenaUsuario()));
+
         return usuarioRepository.save(nuevoUsuario);
     }
 
     public Usuario validarLogin(String correo, String contrasena) {
-        return usuarioRepository.findByCorreoElectronicoAndContrasenaUsuario(correo, contrasena)
+        Usuario usuario = usuarioRepository.findByCorreoElectronico(correo)
                 .orElseThrow(() -> new RuntimeException("Credenciales incorrectas"));
+
+        // Validar contraseña encriptada
+        if (!passwordEncoder.matches(contrasena, usuario.getContrasenaUsuario())) {
+            throw new RuntimeException("Credenciales incorrectas");
+        }
+
+        return usuario;
     }
 
     public PerfilResponseDTO obtenerPerfil(String correo) {
@@ -119,30 +133,30 @@ public class UsuarioService {
 
     @Transactional
     public void actualizarContrasena(String codigo, String nuevaContrasena) {
-        String consultaSql = "SELECT id_usuario FROM tokens_restablecer_contrasena WHERE token = ? AND fecha_expiracion > ?";
+        PasswordResetToken token = tokenRepository.findByToken(codigo)
+                .orElseThrow(() -> new RuntimeException("Código inválido o expirado"));
 
-        List<Long> listaIdentificadores = baseDeDatosDirecta.queryForList(consultaSql, Long.class, codigo, LocalDateTime.now());
-
-        if (listaIdentificadores.isEmpty()) {
-            throw new RuntimeException("El código es inválido o ha caducado");
+        if (token.getFechaExpiracion().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("El código ha expirado");
         }
 
-        Long identificadorUsuario = listaIdentificadores.get(0);
+        Usuario usuario = token.getUsuario();
 
-        Usuario usuario = usuarioRepository.findById(identificadorUsuario)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        // Encriptar nueva contraseña
+        usuario.setContrasenaUsuario(passwordEncoder.encode(nuevaContrasena));
 
-        usuario.setContrasenaUsuario(nuevaContrasena);
         usuarioRepository.save(usuario);
-
-        String borradoSql = "DELETE FROM tokens_restablecer_contrasena WHERE id_usuario = ?";
-        baseDeDatosDirecta.update(borradoSql, identificadorUsuario);
+        tokenRepository.delete(token);
     }
 
     public Usuario registrarUsuarioDesdeAdmin(Usuario nuevoUsuario) {
         if (usuarioRepository.findByCorreoElectronico(nuevoUsuario.getCorreoElectronico()).isPresent()) {
-            throw new RuntimeException("El correo electronico ya esta registrado");
+            throw new RuntimeException("El correo ya está registrado");
         }
+
+        // Encriptar contraseña
+        nuevoUsuario.setContrasenaUsuario(passwordEncoder.encode(nuevoUsuario.getContrasenaUsuario()));
+
         return usuarioRepository.save(nuevoUsuario);
     }
 
