@@ -3,7 +3,8 @@ package com.darkmatter.bookcut.config;
 import com.darkmatter.bookcut.model.Cita;
 import com.darkmatter.bookcut.model.EstadoCita;
 import com.darkmatter.bookcut.repository.CitaRepository;
-import com.darkmatter.bookcut.service.EmailService;
+import com.darkmatter.bookcut.service.BrevoEmailService;
+import com.darkmatter.bookcut.service.BrevoEmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -20,7 +21,7 @@ public class TareaVencimientoCitas {
     private CitaRepository citaRepository;
 
     @Autowired
-    private EmailService emailService;
+    private BrevoEmailService emailService;
 
     private final DateTimeFormatter formateadorFecha = DateTimeFormatter.ofPattern("dd/MM/yyyy 'a las' HH:mm");
 

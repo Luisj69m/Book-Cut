@@ -28,4 +28,4 @@ public class PerfilResponseDTO {
     public String getTelefono() { return telefono; }
     public void setTelefono(String telefono) { this.telefono = telefono; }
 
-    }
+}

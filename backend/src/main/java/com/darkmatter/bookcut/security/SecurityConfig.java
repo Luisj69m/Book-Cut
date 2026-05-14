@@ -7,6 +7,8 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -19,6 +21,7 @@ public class SecurityConfig {
 
     @Autowired
     private JwtRequestFilter jwtRequestFilter;
+
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -41,6 +44,10 @@ public class SecurityConfig {
 
                         // Solo BARBEROS o ADMIN pueden crear o editar barberías
                         .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/barberias/mi-barberia/**").hasAnyRole("BARBERO", "ADMIN")
+
+                        // AÑADE ESTA LÍNEA:
+                        .requestMatchers("/api/usuarios/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         // El resto de la API requiere estar autenticado
                         .anyRequest().authenticated()
@@ -70,5 +77,10 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource fuente = new UrlBasedCorsConfigurationSource();
         fuente.registerCorsConfiguration("/**", configuracion);
         return fuente;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }

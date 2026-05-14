@@ -81,10 +81,16 @@ public class UsuarioController {
     }
 
     @PostMapping("/solicitar-recuperacion")
-    public ResponseEntity<String> solicitarRecuperacionContrasena(@RequestBody Map<String, String> peticion) {
+    public org.springframework.http.ResponseEntity<String> solicitarRecuperacionContrasena(@RequestBody java.util.Map<String, String> peticion) {
         String correoElectronico = peticion.get("correoElectronico");
-        usuarioService.enviarEmailRecuperacion(correoElectronico);
-        return ResponseEntity.ok("Si el correo existe, se enviaran instrucciones.");
+        try {
+            usuarioService.enviarEmailRecuperacion(correoElectronico);
+            return org.springframework.http.ResponseEntity.ok("Si el correo existe, se enviaran instrucciones.");
+        } catch (Exception excepcionCorreo) {
+            System.out.println("Error SMTP en recuperacion: " + excepcionCorreo.getMessage());
+            excepcionCorreo.printStackTrace();
+            return org.springframework.http.ResponseEntity.status(500).body("Error interno al intentar enviar el correo.");
+        }
     }
 
     @PostMapping("/confirmar-recuperacion")
@@ -116,6 +122,7 @@ public class UsuarioController {
 
             Usuario nuevoBarbero = new Usuario();
             nuevoBarbero.setNombre(datosPeticion.get("nombreUsuario").toString());
+            nuevoBarbero.setApellidos(datosPeticion.get("apellidos").toString()); // AÑADE ESTA LÍNEA
             nuevoBarbero.setCorreoElectronico(datosPeticion.get("correoElectronico").toString());
             nuevoBarbero.setContrasenaUsuario(datosPeticion.get("contrasenaUsuario").toString());
             nuevoBarbero.setTelefono(datosPeticion.get("telefonoUsuario").toString());

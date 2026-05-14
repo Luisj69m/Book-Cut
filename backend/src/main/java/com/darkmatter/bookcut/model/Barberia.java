@@ -32,6 +32,9 @@ public class Barberia {
     @JsonIgnore
     private Usuario barberoPropietario;
 
+    @Column(name = "url_imagen")
+    private String urlImagen;
+
     public Barberia() {}
 
     // Getters y Setters
@@ -49,4 +52,10 @@ public class Barberia {
     public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
     public Usuario getBarberoPropietario() { return barberoPropietario; }
     public void setBarberoPropietario(Usuario barberoPropietario) { this.barberoPropietario = barberoPropietario; }
+    public String getUrlImagen() {
+        return urlImagen;
+    }
+    public void setUrlImagen(String urlImagen) {
+        this.urlImagen = urlImagen;
+    }
 }

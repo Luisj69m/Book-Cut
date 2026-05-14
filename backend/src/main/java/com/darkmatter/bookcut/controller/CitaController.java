@@ -3,6 +3,7 @@ package com.darkmatter.bookcut.controller;
 import com.darkmatter.bookcut.DTO.CitaResponseDTO;
 import com.darkmatter.bookcut.model.*;
 import com.darkmatter.bookcut.repository.*;
+import com.darkmatter.bookcut.service.BrevoEmailService;
 import com.darkmatter.bookcut.service.CitaService;
 import com.darkmatter.bookcut.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,8 @@ public class CitaController {
     private BarberiaRepository barberiaRepository;
     @Autowired
     private ServicioRepository servicioRepository;
+    @Autowired
+    private BrevoEmailService brevoEmailService;
 
     @PostMapping("/crear")
     public ResponseEntity<?> crearCita(@RequestBody Map<String, Object> datosPeticion, @AuthenticationPrincipal String correoCliente){
@@ -74,6 +77,18 @@ public class CitaController {
             citaPreparada.setBarberoAsignado(barberoDisponible);
 
             Cita citaGuardada = citaService.crearNuevaCita(citaPreparada);
+
+            // Enviar correo de confirmación de creación
+            try {
+                brevoEmailService.enviarCorreoCitaCreada(
+                        citaGuardada.getClienteReserva().getCorreoElectronico(),
+                        citaGuardada.getClienteReserva().getNombre(),
+                        citaGuardada.getFechaHoraCita().toString(),
+                        citaGuardada.getBarberoAsignado().getBarberiaAsignada().getNombre()
+                );
+            } catch (Exception e) {
+                System.out.println("Error enviando correo de creación: " + e.getMessage());
+            }
 
             return ResponseEntity.status(201).body(citaGuardada);
 
@@ -166,7 +181,12 @@ public class CitaController {
             if (listadoCompletoCitas.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
-            return ResponseEntity.ok(listadoCompletoCitas);
+
+            List<CitaResponseDTO> citasDTO = listadoCompletoCitas.stream()
+                    .map(cita -> citaService.convertirACitaResponseDTO(cita))
+                    .collect(java.util.stream.Collectors.toList());
+
+            return ResponseEntity.ok(citasDTO);
         } catch (Exception excepcionConsulta) {
             return ResponseEntity.status(500).body("Error al obtener el listado global de citas: " + excepcionConsulta.getMessage());
         }
@@ -179,9 +199,15 @@ public class CitaController {
             if (citasDelLocal.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
-            return ResponseEntity.ok(citasDelLocal);
+
+            List<CitaResponseDTO> citasDTO = citasDelLocal.stream()
+                    .map(cita -> citaService.convertirACitaResponseDTO(cita))
+                    .collect(java.util.stream.Collectors.toList());
+
+            return ResponseEntity.ok(citasDTO);
         } catch (Exception excepcionConsulta) {
             return ResponseEntity.status(500).body("Error al obtener las citas del local: " + excepcionConsulta.getMessage());
         }
     }
+
 }
