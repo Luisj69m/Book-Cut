@@ -1,26 +1,23 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import '../models/cita_request.dart';
+import 'calendar_client_screen.dart'; //
 
 class ServicesClientScreen extends StatefulWidget {
   final int barberiaId;
   final String barberiaNombre;
-  final String barberiaDireccion; // <-- ¡NUEVO!
-  final String barberiaZona;      // <-- ¡NUEVO!
-  final String barberiaDescripcion; // <-- ¡NUEVO!
-  final String fecha;
-  final String hora;
-  final int idCliente;
+  final String barberiaDireccion;
+  final String barberiaZona;
+  final String barberiaDescripcion;
+  final int idCliente; //  FECHA Y HORA ELIMINADOS
 
   const ServicesClientScreen({
     super.key,
     required this.barberiaId,
     required this.barberiaNombre,
-    this.barberiaDireccion = "Dirección no disponible", // Por si viene vacío
+    this.barberiaDireccion = "Dirección no disponible",
     this.barberiaZona = "",
     this.barberiaDescripcion = "Barbería Clásica",
-    required this.fecha,
-    required this.hora,
     required this.idCliente,
   });
 
@@ -33,6 +30,11 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
   List<dynamic> _servicios = [];
   final ApiService _apiService = ApiService();
 
+  final mainColor = const Color(0xFF381483);
+  final accentBlue = const Color(0xFF2962FF);
+  final accentPink = const Color(0xFFE96D71);
+  final accentLilac = const Color(0xFFB388FF);
+
   @override
   void initState() {
     super.initState();
@@ -41,8 +43,6 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
 
   Future<void> _cargarServicios() async {
     try {
-      // ⚠️ Cambiaremos esto en api_service cuando Iván confirme la ruta
-      // De momento imaginemos que ya existe getServiciosPorBarberia
       final data = await _apiService.getServiciosPorBarberia(widget.barberiaId);
       setState(() {
         _servicios = data;
@@ -50,314 +50,269 @@ class _ServicesClientScreenState extends State<ServicesClientScreen> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      // Silenciamos el error temporalmente si no existe la ruta aún
       print('Error al cargar catálogo de esta barbería: $e');
     }
-  }
-
-  void _confirmarReserva(int idServicio, String nombreServicio, String precio) async {
-    setState(() { _isLoading = true; });
-
-    try {
-      List<String> fechaPartes = widget.fecha.split('/');
-      int dia = int.parse(fechaPartes[0]);
-      int mes = int.parse(fechaPartes[1]);
-      int anio = int.parse(fechaPartes[2]);
-
-      List<String> horaPartes = widget.hora.split(':');
-      int hora = int.parse(horaPartes[0]);
-      int min = int.parse(horaPartes[1]);
-
-      DateTime fechaHoraSeleccionada = DateTime(anio, mes, dia, hora, min);
-
-      // ¡AQUÍ CREAMOS LA RESERVA EXACTAMENTE COMO PIDE IVÁN!
-      final reserva = CitaRequest(
-        idBarberia: widget.barberiaId,
-        idServicio: idServicio,
-        fechaHora: fechaHoraSeleccionada,
-      );
-
-      // La enviamos al servidor
-      await _apiService.reservarCita(reserva);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('¡Cita reservada con éxito!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        Navigator.popUntil(context, (route) => route.isFirst);
-      }
-    } catch (e) {
-      String mensajeLimpio = e.toString().replaceAll('Exception: ', '');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(mensajeLimpio),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() { _isLoading = false; });
-    }
-  }
-
-  void _mostrarDialogoConfirmacion(int idServicio, String nombreServicio, String precio) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(25.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.check_circle_outline, size: 60, color: Colors.green),
-              const SizedBox(height: 15),
-              const Text("Confirmar Reserva", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              const Divider(height: 30),
-              Text("Servicio: $nombreServicio", style: const TextStyle(fontSize: 16)),
-              const SizedBox(height: 5),
-              Text("Fecha: ${widget.fecha} - ${widget.hora}", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 5),
-              Text("Importe: $precio", style: const TextStyle(fontSize: 18, color: Colors.green, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 25),
-              SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF381483),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _confirmarReserva(idServicio, nombreServicio, precio);
-                  },
-                  child: const Text("Confirmar y Finalizar", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 250.0,
-            pinned: true,
-            backgroundColor: const Color(0xFF381483),
-            elevation: 0,
-            leading: Padding(
-              padding: const EdgeInsets.only(left: 10.0, top: 8.0, bottom: 8.0),
-              child: Container(
-                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.black87, size: 22),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-            ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Container(
-                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                  child: IconButton(
-                    icon: const Icon(Icons.ios_share, color: Colors.black87, size: 20),
-                    onPressed: () {},
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, right: 15.0),
-                child: Container(
-                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                  child: IconButton(
-                    icon: const Icon(Icons.favorite_border, color: Colors.black87, size: 20),
-                    onPressed: () {},
-                  ),
-                ),
-              ),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Image.network(
-                "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=500&auto=format&fit=crop&q=60",
-                fit: BoxFit.cover,
-              ),
-            ),
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: const Alignment(0.0, -0.8),
+            radius: 1.5,
+            colors: [accentPink, mainColor],
           ),
-
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // --- AHORA USAMOS LAS VARIABLES DEL CONSTRUCTOR ---
-                  Text(widget.barberiaNombre, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
-                  const SizedBox(height: 5),
-                  Text("${widget.barberiaDireccion}, ${widget.barberiaZona}", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-                  const SizedBox(height: 12),
-
-                  Row(
-                    children: [
-                      const Icon(Icons.star, color: Colors.black87, size: 16),
-                      const SizedBox(width: 4),
-                      const Text("5,0", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)), // Esto también lo podríamos pasar dinámico si el backend lo da
-                      Text(" (Reseñas próximamente)", style: TextStyle(color: const Color(0xFFE96D71), fontSize: 14, fontWeight: FontWeight.w500)),
-                    ],
+        ),
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // ── CABECERA CON IMAGEN ──
+            SliverAppBar(
+              expandedHeight: 180.0,
+              pinned: true,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 10.0, top: 8.0, bottom: 8.0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.3),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white.withOpacity(0.2))
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(widget.barberiaDescripcion, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-                  const SizedBox(height: 25),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildTab("SERVICIOS", true),
-                      _buildTab("RESEÑAS", false),
-                      _buildTab("PORTAFOLIO", false),
-                      _buildTab("DETALLES", false),
-                    ],
-                  ),
-                  Divider(height: 1, thickness: 1, color: Colors.grey.shade300),
-                  const SizedBox(height: 25),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Servicios de este local", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                      Icon(Icons.keyboard_arrow_up, color: Colors.grey.shade500),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                ],
+                ),
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Image.network(
+                  "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=500&auto=format&fit=crop&q=60",
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          ),
 
-          if (_isLoading)
+            // ── INFO DE LA BARBERÍA (CRISTAL) ──
+            SliverToBoxAdapter(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.3),
+                      border: Border(
+                        bottom: BorderSide(color: Colors.white.withOpacity(0.15), width: 1.5),
+                      ),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(25, 25, 25, 30),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.barberiaNombre, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
+                        const SizedBox(height: 10),
+
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.location_on_rounded, color: accentPink, size: 18),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text("${widget.barberiaDireccion}, ${widget.barberiaZona}", style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14, height: 1.3)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 15),
+
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(color: Colors.orange.withOpacity(0.2), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.orange.withOpacity(0.5))),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.star_rounded, color: Colors.orangeAccent, size: 18),
+                                  const SizedBox(width: 4),
+                                  const Text("5.0", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.orangeAccent)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(color: accentLilac.withOpacity(0.2), borderRadius: BorderRadius.circular(10), border: Border.all(color: accentLilac.withOpacity(0.5))),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.access_time_rounded, color: accentLilac, size: 16),
+                                  const SizedBox(width: 6),
+                                  Text("Cita para hoy", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: accentLilac)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
+                        Text("Sobre el local", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: accentLilac)),
+                        const SizedBox(height: 8),
+                        Text(widget.barberiaDescripcion, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14, height: 1.4)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ── TÍTULO CATÁLOGO ──
             const SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.all(40.0),
-                child: Center(child: CircularProgressIndicator(color: Color(0xFF381483))),
-              ),
-            )
-          else if (_servicios.isEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(40.0),
-                child: Center(child: Text("No hay servicios disponibles en este local", style: TextStyle(color: Colors.grey.shade600))),
-              ),
-            )
-          else
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                  final servicio = _servicios[index];
-
-                  final int id = servicio['idServicio'];
-                  final String nombre = servicio['nombreServicio'] ?? 'Corte';
-                  final double precioNum = servicio['precioServicio'] is num
-                      ? (servicio['precioServicio'] as num).toDouble()
-                      : 0.0;
-                  final String precioStr = "${precioNum.toStringAsFixed(2)} €";
-                  const String duracion = "30 min"; // Lo dejamos fijo hasta que Iván añada duración a los servicios
-
-                  return Column(
-                    children: [
-                      _buildServiceItem(id, nombre, precioStr, duracion),
-                      if (index < _servicios.length - 1)
-                        Divider(height: 1, thickness: 1, color: Colors.grey.shade100, indent: 20, endIndent: 20),
-                    ],
-                  );
-                },
-                childCount: _servicios.length,
+                padding: EdgeInsets.fromLTRB(25, 30, 25, 15),
+                child: Text("Elige tu servicio", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
               ),
             ),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 50)),
-        ],
+            // ── LISTA DE SERVICIOS ──
+            if (_isLoading)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(40.0),
+                  child: Center(child: CircularProgressIndicator(color: Colors.white)),
+                ),
+              )
+            else if (_servicios.isEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(40.0),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.content_cut_outlined, size: 50, color: Colors.white.withOpacity(0.3)),
+                        const SizedBox(height: 10),
+                        Text("No hay servicios disponibles", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 16)),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                      final servicio = _servicios[index];
+
+                      final int id = servicio['idServicio'];
+                      final String nombre = servicio['nombreServicio'] ?? 'Corte';
+                      final double precioNum = servicio['precioServicio'] is num
+                          ? (servicio['precioServicio'] as num).toDouble()
+                          : 0.0;
+                      final String precioStr = "${precioNum.toStringAsFixed(2)} €";
+                      final String duracion = "${servicio['duracionMinutos'] ?? 30} min";
+
+                      return _buildServiceCard(id, nombre, precioStr, duracion);
+                    },
+                    childCount: _servicios.length,
+                  ),
+                ),
+              ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 50)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTab(String title, bool isActive) {
-    return Column(
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: isActive ? Colors.black87 : Colors.grey.shade500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          height: 3,
-          width: 40,
-          decoration: BoxDecoration(
-            color: isActive ? Colors.black87 : Colors.transparent,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        )
-      ],
-    );
-  }
+  // ── TARJETA DE SERVICIO DE CRISTAL ──
+  Widget _buildServiceCard(int id, String nombre, String precio, String duracion) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                  color: accentLilac.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: accentLilac.withOpacity(0.3))
+              ),
+              child: Icon(Icons.content_cut_rounded, color: accentLilac),
+            ),
+            const SizedBox(width: 15),
 
-  Widget _buildServiceItem(int id, String nombre, String precio, String duracion) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Text(
-              nombre,
-              style: const TextStyle(fontSize: 15, color: Colors.black87),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(nombre, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 6),
+                  Text(duracion, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.w500)),
+                ],
+              ),
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(precio, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87)),
-              const SizedBox(height: 2),
-              Text(duracion, style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
-            ],
-          ),
-          const SizedBox(width: 15),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF381483),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              minimumSize: const Size(0, 36),
+
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(precio, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.greenAccent)),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentLilac,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                    minimumSize: const Size(0, 36),
+                  ),
+                  // AHORA NAVEGAMOS AL CALENDARIO PASÁNDOLE LOS DATOS
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CalendarClientScreen(
+                          barberiaId: widget.barberiaId,
+                          barberiaNombre: widget.barberiaNombre,
+                          barberiaDireccion: widget.barberiaDireccion,
+                          barberiaZona: widget.barberiaZona,
+                          barberiaDescripcion: widget.barberiaDescripcion,
+                          idCliente: widget.idCliente,
+                          idServicio: id,
+                          nombreServicio: nombre,
+                          precioServicio: precio,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text("Seleccionar", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
+              ],
             ),
-            onPressed: () => _mostrarDialogoConfirmacion(id, nombre, precio),
-            child: const Text("Reservar", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

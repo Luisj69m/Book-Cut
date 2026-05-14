@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:ui';
 import '../services/api_service.dart';
 import 'barber_requested_appointments_screen.dart';
 import 'barber_accepted_appointments_screen.dart';
@@ -25,6 +26,7 @@ class BarberHomeScreen extends StatefulWidget {
 }
 
 class _BarberHomeScreenState extends State<BarberHomeScreen> {
+  // Mantengo tus colores originales intactos
   final mainColor = const Color(0xFF381483);
   final accentColor = const Color(0xFFE96D71);
   final accentBlue = const Color(0xFF2962FF);
@@ -41,10 +43,8 @@ class _BarberHomeScreenState extends State<BarberHomeScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final correo = prefs.getString('email_usuario') ?? '';
-      print("📧 Correo usado: $correo");
       if (correo.isEmpty) return;
       final barberia = await ApiService().getBarberiaAsignada(correo);
-      print("🏪 Barbería recibida: $barberia");
       if (barberia != null && mounted) {
         setState(() => _nombreBarberia = barberia['nombre'] ?? widget.shopName);
       }
@@ -53,65 +53,21 @@ class _BarberHomeScreenState extends State<BarberHomeScreen> {
     }
   }
 
-  Widget _buildMenuButton({
-    required IconData icon,
-    required String text,
-    required VoidCallback onTap,
-    Color? iconColor,
-  }) {
-    final color = iconColor ?? mainColor;
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade100, width: 1.5),
-              boxShadow: [
-                BoxShadow(color: color.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 3)),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.10),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, size: 22, color: color),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    text,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87),
-                  ),
-                ),
-                Icon(Icons.chevron_right_rounded, size: 20, color: Colors.grey.shade400),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true, // Para que el fondo oscuro llegue hasta abajo
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+          child: _buildGlassmorphicNavBar(activeIndex: 0),
+        ),
+      ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
+          // Tu degradado morado oscuro original
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -119,212 +75,149 @@ class _BarberHomeScreenState extends State<BarberHomeScreen> {
           ),
         ),
         child: SafeArea(
+          bottom: false,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── HEADER: logo centrado ──
+              // ── HEADER PREMIUM ──
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                child: Center(
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white24, width: 2),
-                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))],
-                    ),
-                    child: ClipOval(
-                      child: Image.asset('assets/logo.png', fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Colors.white,
-                          child: Icon(Icons.content_cut, color: mainColor, size: 36),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              const Text(
-                "Panel de Control",
-                style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-              ),
-
-              const SizedBox(height: 20),
-
-              // ── TARJETA PRINCIPAL ──
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8F7FC),
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 8))],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(28),
-                    child: Column(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Cabecera degradada dentro de la tarjeta
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFF381483), Color(0xFF2962FF)],
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              // Inicial del barbero
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white38, width: 1.5),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    widget.barberName.isNotEmpty ? widget.barberName[0].toUpperCase() : "B",
-                                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      widget.barberName.toUpperCase(),
-                                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 1.0),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.storefront_rounded, size: 13, color: Colors.white60),
-                                        const SizedBox(width: 5),
-                                        Flexible(
-                                          child: Text(
-                                            _nombreBarberia,
-                                            style: const TextStyle(color: Colors.white60, fontSize: 13),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Badge activo
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: Colors.green.shade300, width: 1),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(width: 6, height: 6, decoration: const BoxDecoration(color: Colors.greenAccent, shape: BoxShape.circle)),
-                                    const SizedBox(width: 5),
-                                    const Text("Activo", style: TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                        const Text(
+                          "Hola,",
+                          style: TextStyle(color: Colors.white70, fontSize: 16),
                         ),
-
-                        // Lista de opciones
-                        Expanded(
-                          child: ListView(
-                            padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-                            physics: const BouncingScrollPhysics(),
-                            children: [
-                              _buildMenuButton(
-                                icon: Icons.storefront_rounded,
-                                text: "Mi Barbería",
-                                iconColor: accentColor,
-                                onTap: () => Navigator.push(context, MaterialPageRoute(
-                                  builder: (_) => MiBarberiaScreen(idUsuarioBarbero: widget.idUsuarioBarbero),
-                                )),
-                              ),
-                              _buildMenuButton(
-                                icon: Icons.pending_actions_rounded,
-                                text: "Citas Solicitadas",
-                                iconColor: const Color(0xFFFF6B35),
-                                onTap: () => Navigator.push(context, MaterialPageRoute(
-                                  builder: (_) => BarberRequestedAppointmentsScreen(idUsuarioBarbero: widget.idUsuarioBarbero),
-                                )),
-                              ),
-                              _buildMenuButton(
-                                icon: Icons.check_circle_rounded,
-                                text: "Citas Aceptadas",
-                                iconColor: Colors.green,
-                                onTap: () => Navigator.push(context, MaterialPageRoute(
-                                  builder: (_) => BarberAcceptedAppointmentsScreen(idUsuarioBarbero: widget.idUsuarioBarbero),
-                                )),
-                              ),
-                              _buildMenuButton(
-                                icon: Icons.content_cut_rounded,
-                                text: "Servicios ofrecidos",
-                                iconColor: mainColor,
-                                onTap: () => Navigator.push(context, MaterialPageRoute(
-                                  builder: (_) => const ServicesBarberScreen(),
-                                )),
-                              ),
-                              _buildMenuButton(
-                                icon: Icons.leaderboard_rounded,
-                                text: "Panel de ingresos",
-                                iconColor: accentBlue,
-                                onTap: () => Navigator.push(context, MaterialPageRoute(
-                                  builder: (_) => const EarningsBarberScreen(),
-                                )),
-                              ),
-                            ],
-                          ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.barberName.isNotEmpty ? widget.barberName : "Barbero",
+                          style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5),
                         ),
                       ],
                     ),
-                  ),
+                    // Avatar / Badge Activo
+                    Container(
+                      width: 55,
+                      height: 55,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.greenAccent.withOpacity(0.5), width: 2),
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Text(
+                            widget.barberName.isNotEmpty ? widget.barberName[0].toUpperCase() : "B",
+                            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                          ),
+                          Positioned(
+                            bottom: 2, right: 2,
+                            child: Container(
+                              width: 12, height: 12,
+                              decoration: BoxDecoration(
+                                color: Colors.greenAccent,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: mainColor, width: 2),
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                    )
+                  ],
                 ),
               ),
 
-              const SizedBox(height: 12),
-
-              // ── NAV BAR INFERIOR ──
               Padding(
-                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: mainColor,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [BoxShadow(color: mainColor.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 6))],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.storefront_rounded, color: Colors.white.withOpacity(0.5), size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      _nombreBarberia,
+                      style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              // ── BENTO BOX GRID ──
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 100),
+                  child: Column(
                     children: [
-                      _buildNavItem(Icons.home_rounded, active: true, onTap: () {}),
-                      _buildNavItem(
-                        Icons.calendar_month_rounded,
+                      // 1. BANNER PRINCIPAL (Ancho Completo)
+                      _buildBentoBanner(
+                        title: "Citas Solicitadas",
+                        subtitle: "Nuevas reservas pendientes de revisión",
+                        icon: Icons.pending_actions_rounded,
+                        color: const Color(0xFFFF9800), // Naranja alerta
                         onTap: () => Navigator.push(context, MaterialPageRoute(
                           builder: (_) => BarberRequestedAppointmentsScreen(idUsuarioBarbero: widget.idUsuarioBarbero),
                         )),
                       ),
-                      _buildNavItem(
-                        Icons.settings_rounded,
-                        onTap: () => Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => SettingsScreen(idCliente: widget.idUsuarioBarbero),
-                        )),
+
+                      const SizedBox(height: 12),
+
+                      // 2. FILA DE CUADRADOS (Mitad y Mitad)
+                      Row(
+                        children: [
+                          _buildBentoSquare(
+                            title: "Citas Aceptadas",
+                            subtitle: "Tu agenda del día",
+                            icon: Icons.check_circle_rounded,
+                            color: Colors.greenAccent,
+                            onTap: () => Navigator.push(context, MaterialPageRoute(
+                              builder: (_) => BarberAcceptedAppointmentsScreen(idUsuarioBarbero: widget.idUsuarioBarbero),
+                            )),
+                          ),
+                          _buildBentoSquare(
+                            title: "Ingresos",
+                            subtitle: "Panel financiero",
+                            icon: Icons.leaderboard_rounded,
+                            color: const Color(0xFF40C4FF), // Cyan claro
+                            onTap: () => Navigator.push(context, MaterialPageRoute(
+                              builder: (_) => EarningsBarberScreen(idUsuarioBarbero: widget.idUsuarioBarbero),
+                            )),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // 3. OTRA FILA DE CUADRADOS (Mitad y Mitad)
+                      Row(
+                        children: [
+                          _buildBentoSquare(
+                            title: "Mi Barbería",
+                            subtitle: "Gestión del local",
+                            icon: Icons.store_rounded,
+                            color: accentColor, // Rosa
+                            onTap: () => Navigator.push(context, MaterialPageRoute(
+                              builder: (_) => MiBarberiaScreen(idUsuarioBarbero: widget.idUsuarioBarbero),
+                            )),
+                          ),
+                          _buildBentoSquare(
+                            title: "Servicios",
+                            subtitle: "Precios y oferta",
+                            icon: Icons.content_cut_rounded,
+                            color: const Color(0xFFB388FF), // Lila
+                            onTap: () => Navigator.push(context, MaterialPageRoute(
+                              // ✅ AÑADIDO EL PARÁMETRO CORRECTAMENTE
+                              builder: (_) => ServicesBarberScreen(idUsuarioBarbero: widget.idUsuarioBarbero),
+                            )),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -337,17 +230,146 @@ class _BarberHomeScreenState extends State<BarberHomeScreen> {
     );
   }
 
-  Widget _buildNavItem(IconData icon, {bool active = false, required VoidCallback onTap}) {
+  // --- WIDGET BENTO: BANNER (Horizontal) ---
+  Widget _buildBentoBanner({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(horizontal: 6),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12), // Fondo tintado para dar sensación de alerta/importancia
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13)),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_rounded, color: color.withOpacity(0.8)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- WIDGET BENTO: CUADRADO (Vertical) ---
+  Widget _buildBentoSquare({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 160,
+          margin: const EdgeInsets.symmetric(horizontal: 6),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.06), // Mate oscuro elegante
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: Colors.white.withOpacity(0.05), width: 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, height: 1.2)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- NAVBAR CRISTALINA ---
+  Widget _buildGlassmorphicNavBar({required int activeIndex}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(40),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(40),
+            border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(Icons.home_rounded, 0, activeIndex, () {}),
+              _buildNavItem(Icons.calendar_month_rounded, 1, activeIndex, () {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => BarberRequestedAppointmentsScreen(idUsuarioBarbero: widget.idUsuarioBarbero),
+                ));
+              }),
+              _buildNavItem(Icons.settings_rounded, 2, activeIndex, () {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => SettingsScreen(idCliente: widget.idUsuarioBarbero),
+                ));
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, int index, int activeIndex, VoidCallback onTap) {
+    final isActive = index == activeIndex;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: active ? Colors.white.withOpacity(0.18) : Colors.transparent,
+          color: isActive ? accentColor : Colors.transparent,
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: active ? Colors.white : Colors.white60, size: 26),
+        child: Icon(icon, color: isActive ? Colors.white : Colors.white70, size: 26),
       ),
     );
   }

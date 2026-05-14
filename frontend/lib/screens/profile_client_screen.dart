@@ -1,5 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../utils/glass_toast.dart'; // ✅ IMPORTAMOS NUESTRO TOAST PREMIUM
 
 class ProfileClientScreen extends StatefulWidget {
   const ProfileClientScreen({super.key});
@@ -19,6 +21,12 @@ class _ProfileClientScreenState extends State<ProfileClientScreen> {
 
   bool _isLoading = true;
 
+  // Colores corporativos y complementarios
+  final Color deepPurple = const Color(0xFF381483);
+  final Color pinkAccent = const Color(0xFFE96D71);
+  final Color vibrantPurple = const Color(0xFF6200EA);
+  final Color accentLilac = const Color(0xFFB388FF);
+
   @override
   void initState() {
     super.initState();
@@ -29,23 +37,29 @@ class _ProfileClientScreenState extends State<ProfileClientScreen> {
   Future<void> _cargarDatos() async {
     try {
       final datos = await _apiService.getPerfil();
-      setState(() {
-        _nombreController.text = datos['nombre'] ?? "";
-        _apellidosController.text = datos['apellidos'] ?? "";
-        _emailController.text = datos['correoElectronico'] ?? "";
-        _telefonoController.text = datos['telefono'] ?? "";
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _nombreController.text = datos['nombre'] ?? "";
+          _apellidosController.text = datos['apellidos'] ?? "";
+          _emailController.text = datos['correoElectronico'] ?? "";
+          _telefonoController.text = datos['telefono'] ?? "";
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      _mostrarSnackBar("Error al cargar datos", Colors.redAccent);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        // ✅ USAMOS GLASS TOAST DE ERROR
+        GlassToast.showError(context, "Error", "No se pudieron cargar tus datos");
+      }
     }
   }
 
   // --- 2. GUARDAR DATOS ---
   Future<void> _guardarPerfil() async {
     if (_nombreController.text.isEmpty) {
-      _mostrarSnackBar("El nombre es obligatorio", Colors.orange);
+      // ✅ USAMOS GLASS TOAST DE WARNING
+      GlassToast.showWarning(context, "Atención", "El nombre es obligatorio para actualizar tu perfil");
       return;
     }
 
@@ -58,97 +72,185 @@ class _ProfileClientScreenState extends State<ProfileClientScreen> {
         _telefonoController.text.trim(),
       );
 
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
 
-      if (exitoDatos) {
-        _mostrarSnackBar("¡Perfil actualizado!", Colors.green);
-      } else {
-        _mostrarSnackBar("Error al guardar los cambios", Colors.red);
+        if (exitoDatos) {
+          // ✅ USAMOS GLASS TOAST DE ÉXITO
+          GlassToast.showSuccess(context, "¡Perfil actualizado!", "Tus datos se han guardado correctamente");
+        } else {
+          GlassToast.showError(context, "Error", "No se pudieron guardar los cambios");
+        }
       }
     } catch (e) {
-      setState(() => _isLoading = false);
-      _mostrarSnackBar("Fallo en la conexión", Colors.red);
-    }
-  }
-
-  void _mostrarSnackBar(String mensaje, Color color) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(mensaje), backgroundColor: color, behavior: SnackBarBehavior.floating),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+        GlassToast.showError(context, "Fallo de conexión", "Comprueba tu conexión a internet");
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      // Fondo Degradado
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: RadialGradient(
-            center: Alignment(0.0, -0.8),
+            center: const Alignment(0.0, -0.8),
             radius: 1.5,
-            colors: [Color(0xFFE96D71), Color(0xFF381483)],
+            colors: [pinkAccent, deepPurple],
           ),
         ),
         child: SafeArea(
-          bottom: false,
           child: Column(
             children: [
-              // --- HEADER ---
+              // --- HEADER CRISTALINO ---
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 24),
-                      onPressed: () => Navigator.pop(context),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                     ),
-                    const Text("Mi Perfil", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 15),
+                    const Text("Mi Perfil", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
                   ],
                 ),
               ),
+
               const SizedBox(height: 10),
 
-              // --- CONTENEDOR BLANCO ---
+              // --- CUERPO PRINCIPAL (SCROLLABLE) ---
               Expanded(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.topCenter,
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(top: 60),
-                      width: double.infinity,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                    : SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+                  child: Column(
+                    children: [
+                      // --- AVATAR GLOWING ---
+                      Center(
+                        child: Container(
+                          width: 130,
+                          height: 130,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withOpacity(0.05),
+                            border: Border.all(color: accentLilac.withOpacity(0.6), width: 2.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: vibrantPurple.withOpacity(0.4),
+                                blurRadius: 25,
+                                spreadRadius: 2,
+                              )
+                            ],
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              ClipOval(
+                                child: Icon(Icons.person, size: 70, color: Colors.white.withOpacity(0.8)),
+                              ),
+                              // Detallito de insignia pro
+                              Positioned(
+                                bottom: 5,
+                                right: 5,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: pinkAccent,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: deepPurple, width: 2),
+                                  ),
+                                  child: const Icon(Icons.verified_rounded, color: Colors.white, size: 16),
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
                       ),
-                      child: _isLoading
-                          ? const Center(child: CircularProgressIndicator(color: Color(0xFF381483)))
-                          : _buildFormulario(),
-                    ),
 
-                    // AVATAR ESTÁTICO (Sin cámara ni botones)
-                    Positioned(
-                      top: 0,
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.grey.shade100,
-                          border: Border.all(color: Colors.white, width: 5),
-                          boxShadow: const [
-                            BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 5))
-                          ],
-                        ),
-                        child: const ClipOval(
-                          child: Icon(Icons.person, size: 80, color: Color(0xFF381483)),
+                      const SizedBox(height: 40),
+
+                      // --- TARJETA DE CRISTAL (FORMULARIO) ---
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                          child: Container(
+                            padding: const EdgeInsets.all(25),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(30),
+                              border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.manage_accounts_rounded, color: accentLilac, size: 22),
+                                    const SizedBox(width: 8),
+                                    const Text("Datos Personales", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                                const SizedBox(height: 25),
+
+                                _buildGlassTextField(
+                                    label: "Nombre",
+                                    icono: Icons.person_outline,
+                                    controller: _nombreController
+                                ),
+                                const SizedBox(height: 20),
+
+                                _buildGlassTextField(
+                                    label: "Apellidos",
+                                    icono: Icons.badge_outlined,
+                                    controller: _apellidosController
+                                ),
+                                const SizedBox(height: 20),
+
+                                _buildGlassTextField(
+                                    label: "Teléfono",
+                                    icono: Icons.phone_outlined,
+                                    controller: _telefonoController,
+                                    keyboardType: TextInputType.phone
+                                ),
+                                const SizedBox(height: 20),
+
+                                // Campo de correo de solo lectura
+                                _buildGlassTextField(
+                                    label: "Correo Electrónico",
+                                    icono: Icons.lock_outline_rounded,
+                                    controller: _emailController,
+                                    readOnly: true
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+
+                      const SizedBox(height: 40),
+
+                      // --- BOTÓN GUARDAR (GLOWING) ---
+                      _buildGlowingVibrantButton("Guardar Cambios", _guardarPerfil),
+
+                      const SizedBox(height: 40),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -158,54 +260,82 @@ class _ProfileClientScreenState extends State<ProfileClientScreen> {
     );
   }
 
-  // --- FORMULARIO DE DATOS ---
-  Widget _buildFormulario() {
-    return ListView(
-      padding: const EdgeInsets.only(top: 80, left: 30, right: 30, bottom: 30),
-      physics: const BouncingScrollPhysics(),
+  // WIDGET: Campo de texto estilo Cristal con Icono
+  Widget _buildGlassTextField({
+    required String label,
+    required IconData icono,
+    required TextEditingController controller,
+    bool readOnly = false,
+    TextInputType keyboardType = TextInputType.text
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Center(
-          child: Text("Información Personal", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF381483))),
-        ),
-        const SizedBox(height: 35),
-        _buildTextField(label: "Nombre", icono: Icons.person_outline, controller: _nombreController),
-        const SizedBox(height: 20),
-        _buildTextField(label: "Apellidos", icono: Icons.badge_outlined, controller: _apellidosController),
-        const SizedBox(height: 20),
-        _buildTextField(label: "Correo Electrónico", icono: Icons.email_outlined, controller: _emailController, isEmail: true, readOnly: true),
-        const SizedBox(height: 20),
-        _buildTextField(label: "Teléfono", icono: Icons.phone_outlined, controller: _telefonoController, isPhone: true),
-        const SizedBox(height: 40),
-        SizedBox(
-          width: double.infinity,
-          height: 55,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2962FF),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              elevation: 5,
+        Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: readOnly ? Colors.white54 : accentLilac)),
+        const SizedBox(height: 8),
+        Opacity(
+          opacity: readOnly ? 0.6 : 1.0,
+          child: TextField(
+            controller: controller,
+            readOnly: readOnly,
+            keyboardType: keyboardType,
+            style: const TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.w500),
+            cursorColor: Colors.white,
+            decoration: InputDecoration(
+              prefixIcon: Icon(icono, color: Colors.white.withOpacity(0.5), size: 20),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.05),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15),
+                borderSide: BorderSide(color: readOnly ? Colors.transparent : Colors.white.withOpacity(0.2)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15),
+                borderSide: BorderSide(color: readOnly ? Colors.transparent : accentLilac),
+              ),
             ),
-            onPressed: _guardarPerfil,
-            child: const Text("Guardar Cambios", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildTextField({required String label, required IconData icono, required TextEditingController controller, bool isEmail = false, bool isPhone = false, bool readOnly = false}) {
-    return TextField(
-      controller: controller,
-      readOnly: readOnly,
-      keyboardType: isEmail ? TextInputType.emailAddress : (isPhone ? TextInputType.phone : TextInputType.name),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: Colors.grey.shade600),
-        prefixIcon: Icon(icono, color: readOnly ? Colors.grey : const Color(0xFF381483)),
-        filled: true,
-        fillColor: readOnly ? Colors.grey.shade200 : Colors.grey.shade50,
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: readOnly ? Colors.transparent : Colors.grey.shade200, width: 2)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: readOnly ? Colors.transparent : const Color(0xFF381483), width: 2)),
+  // WIDGET: Botón con Brillo y Color Variante Morada
+  Widget _buildGlowingVibrantButton(String text, VoidCallback onPressed) {
+    return Container(
+      width: double.infinity,
+      height: 55,
+      decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: vibrantPurple.withOpacity(0.4),
+              blurRadius: 20,
+              spreadRadius: 2,
+              offset: const Offset(0, 5),
+            )
+          ]
+      ),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: vibrantPurple,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        ),
+        onPressed: _isLoading ? null : onPressed,
+        child: _isLoading
+            ? const SizedBox(height: 25, width: 25, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+            : Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.save_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text(text, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
     );
   }

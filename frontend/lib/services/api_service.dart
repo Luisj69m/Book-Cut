@@ -403,19 +403,34 @@ class ApiService {
       final response = await http.put(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 10));
 
       print("📥 Respuesta de cancelación: ${response.statusCode}");
+      print("📄 Body completo: ${response.body}");
 
-      if (response.statusCode == 400 || response.statusCode == 500) {
-        String mensajeError = "Error al cancelar";
-        try {
-          final Map<String, dynamic> errorMap = jsonDecode(utf8.decode(response.bodyBytes));
-          mensajeError = errorMap['mensaje'] ?? errorMap['error'] ?? mensajeError;
-        } catch(e) {
-          mensajeError = response.body.isNotEmpty ? response.body : mensajeError;
-        }
-        throw Exception(mensajeError);
+      // 200 o 204 → éxito limpio
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return true;
       }
 
-      return response.statusCode == 200;
+      // 400 con "Authentication failed" → bug de Iván post-cancelación,
+      // la cita SÍ se canceló en BD, lo tratamos como éxito
+      if (response.statusCode == 400) {
+        try {
+          final Map<String, dynamic> errorMap = jsonDecode(utf8.decode(response.bodyBytes));
+          final String mensaje = (errorMap['mensaje'] ?? errorMap['error'] ?? '').toString().toLowerCase();
+          if (mensaje.contains('authentication')) {
+            print("⚠ cancelación exitosa pero falla el correo.");
+            return true; // La cita está cancelada en BD, devolvemos éxito
+          }
+          // Otro 400 real (ej: fecha pasada) → lanzamos el mensaje de Iván
+          throw Exception(errorMap['mensaje'] ?? errorMap['error'] ?? 'No se pudo cancelar la cita');
+        } catch (e) {
+          if (e.toString().contains('authentication') || e.toString().contains('Authentication')) {
+            return true;
+          }
+          rethrow;
+        }
+      }
+
+      throw Exception("Error del servidor (${response.statusCode})");
     } catch (e) {
       print("🚨 Error cancelando cita: $e");
       throw Exception(e.toString().replaceAll('Exception: ', ''));
@@ -601,37 +616,44 @@ class ApiService {
   // ==========================================
   //  7. RECUPERACIÓN DE CONTRASEÑA (Públicos)
   // ==========================================
-  Future<bool> solicitarRecuperacion(String email) async {
-
-    //  AQUÍ ESTÁ EL CAMBIO: La nueva ruta oficial de Iván
+  // ==========================================
+  // 🔑 SOLICITAR RECUPERACIÓN DE CONTRASEÑA
+  // ==========================================
+  Future<bool> solicitarRecuperacionPassword(String email) async {
     final url = "${ApiConfig.baseUrl}/api/usuarios/solicitar-recuperacion";
 
-    final Map<String, dynamic> bodyAEnviar = {
-      "correoElectronico": email,
-    };
-
-    print("🔍 --- INICIO PETICIÓN RECUPERACIÓN --- 🔍");
-    print("🔗 URL EXACTA: $url");
-    print("📝 BODY EXACTO: ${jsonEncode(bodyAEnviar)}");
+    print("🔑 Solicitando recuperación para: $email");
 
     try {
+      // 🚨 ¡AQUÍ ESTÁ LA MAGIA! Cambiado a http.post
       final response = await http.post(
         Uri.parse(url),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(bodyAEnviar),
-      );
+        headers: {'Content-Type': 'application/json'}, // Le decimos que enviamos JSON
+        body: jsonEncode({'correoElectronico': email}), // El cuerpo exacto que pide Iván
+      ).timeout(const Duration(seconds: 10));
 
-      print("📥 --- RESPUESTA SERVIDOR --- 📥");
-      print("🔥 STATUS: ${response.statusCode}");
-      print("🔥 BODY: ${response.body}");
+      print("📥 Respuesta recuperación: ${response.statusCode}");
 
+      // Si todo va bien (Iván debería devolver un 200)
       if (response.statusCode == 200 || response.statusCode == 201) {
         return true;
+      }
+      // 🛡️ Escudo Anti-Errores (Por si el correo no existe, error 400 o 404)
+      else if (response.statusCode == 400 || response.statusCode == 404) {
+        String mensajeError = "No se pudo solicitar la recuperación";
+        try {
+          final errorMap = jsonDecode(utf8.decode(response.bodyBytes));
+          mensajeError = errorMap['mensaje'] ?? errorMap['error'] ?? mensajeError;
+        } catch (_) {
+          mensajeError = response.body.isNotEmpty ? response.body : mensajeError;
+        }
+        throw Exception(mensajeError);
       } else {
         throw Exception("Error del servidor (${response.statusCode})");
       }
     } catch (e) {
-      print("🚨 ERROR EN RECUPERACIÓN: $e");
+      print("🚨 Error en recuperación: $e");
+      // Limpiamos el error para que salga bonito en el SnackBar
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
@@ -639,13 +661,10 @@ class ApiService {
   Future<bool> confirmarRecuperacion(String codigo, String nuevaContrasena) async {
     final url = "${ApiConfig.baseUrl}/api/usuarios/confirmar-recuperacion";
     try {
-      print("🔍 Confirmando código a: $url");
-
       final bodyCodificado = jsonEncode({
         "codigo": codigo,
         "nuevaContrasena": nuevaContrasena
       });
-      print("📦 Datos enviados (Paso 2): $bodyCodificado");
 
       final response = await http.post(
         Uri.parse(url),
@@ -656,10 +675,20 @@ class ApiService {
       print("📩 Respuesta del servidor: Código ${response.statusCode}");
       print("📄 Cuerpo de la respuesta: ${response.body}");
 
-      return response.statusCode == 200;
+      if (response.statusCode == 200) return true;
+
+      // Intentamos extraer el mensaje de error de Iván
+      try {
+        final body = jsonDecode(utf8.decode(response.bodyBytes));
+        final mensaje = body['mensaje'] ?? body['error'];
+        if (mensaje != null) throw Exception(mensaje);
+      } catch (_) {}
+
+      throw Exception("Código incorrecto o expirado (${response.statusCode})");
+
     } catch (e) {
       print("❌ Error de Flutter: $e");
-      return false;
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
 
