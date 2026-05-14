@@ -47,6 +47,10 @@ public class SecurityConfig {
                         // Solo BARBEROS o ADMIN pueden crear o editar barberías
                         .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/barberias/mi-barberia/**").hasAnyRole("BARBERO", "ADMIN")
 
+                        // AÑADE ESTA LÍNEA:
+                        .requestMatchers("/api/usuarios/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
                         // El resto de la API requiere estar autenticado
                         .anyRequest().authenticated()
                 );
