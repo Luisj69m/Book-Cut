@@ -122,6 +122,7 @@ public class UsuarioController {
 
             Usuario nuevoBarbero = new Usuario();
             nuevoBarbero.setNombre(datosPeticion.get("nombreUsuario").toString());
+            nuevoBarbero.setApellidos(datosPeticion.get("apellidos").toString()); // AÑADE ESTA LÍNEA
             nuevoBarbero.setCorreoElectronico(datosPeticion.get("correoElectronico").toString());
             nuevoBarbero.setContrasenaUsuario(datosPeticion.get("contrasenaUsuario").toString());
             nuevoBarbero.setTelefono(datosPeticion.get("telefonoUsuario").toString());
