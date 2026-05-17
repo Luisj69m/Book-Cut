@@ -1,7 +1,6 @@
 package com.darkmatter.bookcut.service;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -18,10 +17,10 @@ public class SupabaseStorageService {
     @Value("${supabase.key}")
     private String supabaseKey;
 
-    private final String bucketName = "barberias-imagenes";
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public String subirImagen(MultipartFile archivo) throws Exception {
+    // MÉTODO GENÉRICO PARA SUBIR IMÁGENES
+    public String subirImagen(MultipartFile archivo, String bucketName) throws Exception {
         String nombreArchivo = UUID.randomUUID().toString() + "-" + archivo.getOriginalFilename();
         String url = supabaseUrl + "/storage/v1/object/" + bucketName + "/" + nombreArchivo;
 
@@ -40,7 +39,18 @@ public class SupabaseStorageService {
         }
     }
 
-    public List<Map<String, String>> listarImagenes() throws Exception {
+    // SUBIR IMAGEN DE BARBERÍA
+    public String subirImagenBarberia(MultipartFile archivo) throws Exception {
+        return subirImagen(archivo, "barberias-imagenes");
+    }
+
+    // SUBIR FOTO DE PERFIL
+    public String subirFotoPerfil(MultipartFile archivo) throws Exception {
+        return subirImagen(archivo, "fotos-perfil");
+    }
+
+    // LISTAR IMÁGENES DE UN BUCKET
+    public List<Map<String, String>> listarImagenes(String bucketName) throws Exception {
         String url = supabaseUrl + "/storage/v1/object/list/" + bucketName;
 
         HttpHeaders headers = new HttpHeaders();
@@ -68,7 +78,18 @@ public class SupabaseStorageService {
         return imagenes;
     }
 
-    public void eliminarImagen(String nombreArchivo) throws Exception {
+    // LISTAR IMÁGENES DE BARBERÍAS
+    public List<Map<String, String>> listarImagenesBarberias() throws Exception {
+        return listarImagenes("barberias-imagenes");
+    }
+
+    // LISTAR FOTOS DE PERFIL
+    public List<Map<String, String>> listarFotosPerfil() throws Exception {
+        return listarImagenes("fotos-perfil");
+    }
+
+    // ELIMINAR IMAGEN
+    public void eliminarImagen(String nombreArchivo, String bucketName) throws Exception {
         String url = supabaseUrl + "/storage/v1/object/" + bucketName + "/" + nombreArchivo;
 
         HttpHeaders headers = new HttpHeaders();

@@ -30,6 +30,9 @@ public class Usuario {
     @Column(name = "rol_usuario", nullable = false)
     private RolUsuario rolUsuario;
 
+    @Column(name = "url_foto_perfil")
+    private String urlFotoPerfil;
+
     public Usuario() {
     }
 
@@ -64,4 +67,11 @@ public class Usuario {
 
     public RolUsuario getRolUsuario() { return rolUsuario; }
     public void setRolUsuario(RolUsuario rolUsuario) { this.rolUsuario = rolUsuario; }
+
+    public String getUrlFotoPerfil() {
+        return urlFotoPerfil;
+    }
+    public void setUrlFotoPerfil(String urlFotoPerfil) {
+        this.urlFotoPerfil = urlFotoPerfil;
+    }
 }
