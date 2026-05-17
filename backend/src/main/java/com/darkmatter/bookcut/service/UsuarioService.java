@@ -80,7 +80,8 @@ public class UsuarioService {
                 usuario.getNombre(),
                 usuario.getApellidos(),
                 usuario.getCorreoElectronico(),
-                usuario.getTelefono()
+                usuario.getTelefono(),
+                usuario.getUrlFotoPerfil()
         );
     }
 
