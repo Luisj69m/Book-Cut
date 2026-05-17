@@ -12,9 +12,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @CrossOrigin(origins = "*")
 @RestController
@@ -78,13 +78,19 @@ public class CitaController {
 
             Cita citaGuardada = citaService.crearNuevaCita(citaPreparada);
 
-            // Enviar correo de confirmación de creación
+            // ✅ CORRECCIÓN: Enviar correo con todos los parámetros requeridos
             try {
+                DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd/MM/yyyy 'a las' HH:mm");
+                String fechaFormateada = citaGuardada.getFechaHoraCita().format(formateador);
+
                 brevoEmailService.enviarCorreoCitaCreada(
                         citaGuardada.getClienteReserva().getCorreoElectronico(),
                         citaGuardada.getClienteReserva().getNombre(),
-                        citaGuardada.getFechaHoraCita().toString(),
-                        citaGuardada.getBarberoAsignado().getBarberiaAsignada().getNombre()
+                        citaGuardada.getBarberoAsignado().getUsuarioAsignado().getNombre(),
+                        citaGuardada.getBarberoAsignado().getBarberiaAsignada().getNombre(),
+                        fechaFormateada,
+                        citaGuardada.getServicioContratado().getNombreServicio(),
+                        String.format("%.2f", citaGuardada.getServicioContratado().getPrecioServicio())
                 );
             } catch (Exception e) {
                 System.out.println("Error enviando correo de creación: " + e.getMessage());
@@ -209,5 +215,4 @@ public class CitaController {
             return ResponseEntity.status(500).body("Error al obtener las citas del local: " + excepcionConsulta.getMessage());
         }
     }
-
 }

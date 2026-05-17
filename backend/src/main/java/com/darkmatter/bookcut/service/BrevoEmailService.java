@@ -43,82 +43,63 @@ public class BrevoEmailService {
         }
     }
 
+    public void enviarCorreoRecuperacion(String destinatario, String nombreUsuario, String codigoRecuperacion) throws Exception {
+        String asunto = "Recuperación de Contraseña - BookCut";
+        String cuerpo = EmailTemplates.plantillaRecuperacion(nombreUsuario, codigoRecuperacion);
+        enviarCorreo(destinatario, asunto, cuerpo);
+    }
+
     public void enviarCorreoConfirmacion(String destinatario, String nombreUsuario) throws Exception {
-        String asunto = "Bienvenido a BookCut";
-        String cuerpoHtml = "<html><body>" +
-                "<h2>¡Bienvenido a BookCut, " + nombreUsuario + "!</h2>" +
-                "<p>Tu cuenta ha sido creada exitosamente.</p>" +
-                "<p>Ya puedes comenzar a usar nuestra plataforma.</p>" +
-                "</body></html>";
-
-        enviarCorreo(destinatario, asunto, cuerpoHtml);
+        String asunto = "¡Bienvenido a BookCut! 🎉";
+        String cuerpo = EmailTemplates.plantillaBienvenida(nombreUsuario);
+        enviarCorreo(destinatario, asunto, cuerpo);
     }
 
-    public void enviarCorreoCitaCreada(String destinatario, String nombreCliente, String fechaHora, String nombreBarberia) throws Exception {
-        String asunto = "Cita solicitada - BookCut";
-        String cuerpoHtml = "<html><body>" +
-                "<h2>Hola " + nombreCliente + "</h2>" +
-                "<p>Tu solicitud de cita ha sido registrada correctamente.</p>" +
-                "<p><strong>Fecha y hora:</strong> " + fechaHora + "</p>" +
-                "<p><strong>Barbería:</strong> " + nombreBarberia + "</p>" +
-                "<p>Recibirás una notificación cuando tu cita sea confirmada.</p>" +
-                "</body></html>";
-
-        enviarCorreo(destinatario, asunto, cuerpoHtml);
+    public void enviarCorreoCitaCreada(String destinatario, String nombreCliente, String nombreBarbero,
+                                       String nombreBarberia, String fechaHora, String servicio, String precio) throws Exception {
+        String asunto = "Solicitud de Cita Recibida - BookCut";
+        String cuerpo = EmailTemplates.plantillaCitaCreada(nombreCliente, nombreBarbero, nombreBarberia,
+                fechaHora, servicio, precio);
+        enviarCorreo(destinatario, asunto, cuerpo);
     }
 
-    public void enviarCorreoCitaAceptada(String destinatario, String nombreCliente, String fechaHora, String nombreBarberia) throws Exception {
-        String asunto = "Cita confirmada - BookCut";
-        String cuerpoHtml = "<html><body>" +
-                "<h2>¡Tu cita ha sido confirmada!</h2>" +
-                "<p>Hola " + nombreCliente + ",</p>" +
-                "<p>Tu cita ha sido aceptada.</p>" +
-                "<p><strong>Fecha y hora:</strong> " + fechaHora + "</p>" +
-                "<p><strong>Barbería:</strong> " + nombreBarberia + "</p>" +
-                "<p>Te esperamos.</p>" +
-                "</body></html>";
-
-        enviarCorreo(destinatario, asunto, cuerpoHtml);
+    public void enviarCorreoCitaAceptada(String destinatario, String nombreCliente, String nombreBarbero,
+                                         String nombreBarberia, String fechaHora, String servicio, String precio) throws Exception {
+        String asunto = "¡Cita Confirmada! - BookCut";
+        String cuerpo = EmailTemplates.plantillaCitaAceptada(nombreCliente, nombreBarbero, nombreBarberia,
+                fechaHora, servicio, precio);
+        enviarCorreo(destinatario, asunto, cuerpo);
     }
 
-    public void enviarCorreoCitaRechazada(String destinatario, String nombreCliente, String fechaHora, String nombreBarberia) throws Exception {
-        String asunto = "Cita rechazada - BookCut";
-        String cuerpoHtml = "<html><body>" +
-                "<h2>Información sobre tu cita</h2>" +
-                "<p>Hola " + nombreCliente + ",</p>" +
-                "<p>Lamentamos informarte que tu cita no ha podido ser confirmada.</p>" +
-                "<p><strong>Fecha y hora solicitada:</strong> " + fechaHora + "</p>" +
-                "<p><strong>Barbería:</strong> " + nombreBarberia + "</p>" +
-                "<p>Te invitamos a solicitar una nueva cita en otro horario.</p>" +
-                "</body></html>";
-
-        enviarCorreo(destinatario, asunto, cuerpoHtml);
+    public void enviarCorreoCitaRechazada(String destinatario, String nombreCliente, String nombreBarbero,
+                                          String nombreBarberia, String fechaHora, String servicio) throws Exception {
+        String asunto = "Cita No Disponible - BookCut";
+        String cuerpo = EmailTemplates.plantillaCitaRechazada(nombreCliente, nombreBarbero, nombreBarberia,
+                fechaHora, servicio);
+        enviarCorreo(destinatario, asunto, cuerpo);
     }
 
-    public void enviarCorreoCitaCancelada(String destinatario, String nombreCliente, String fechaHora, String nombreBarberia) throws Exception {
-        String asunto = "Cita cancelada - BookCut";
-        String cuerpoHtml = "<html><body>" +
-                "<h2>Cita cancelada</h2>" +
-                "<p>Hola " + nombreCliente + ",</p>" +
-                "<p>Tu cita ha sido cancelada.</p>" +
-                "<p><strong>Fecha y hora:</strong> " + fechaHora + "</p>" +
-                "<p><strong>Barbería:</strong> " + nombreBarberia + "</p>" +
-                "</body></html>";
-
-        enviarCorreo(destinatario, asunto, cuerpoHtml);
+    public void enviarCorreoCitaCancelada(String destinatario, String nombreCliente, String nombreBarbero,
+                                          String nombreBarberia, String fechaHora, String servicio) throws Exception {
+        String asunto = "Cita Cancelada - BookCut";
+        String cuerpo = EmailTemplates.plantillaCitaCancelada(nombreCliente, nombreBarbero, nombreBarberia,
+                fechaHora, servicio);
+        enviarCorreo(destinatario, asunto, cuerpo);
     }
 
-    public void enviarCorreoCitaCompletada(String destinatario, String nombreCliente, String fechaHora, String nombreBarberia) throws Exception {
-        String asunto = "Cita completada - BookCut";
-        String cuerpoHtml = "<html><body>" +
-                "<h2>¡Gracias por tu visita!</h2>" +
-                "<p>Hola " + nombreCliente + ",</p>" +
-                "<p>Tu cita ha sido completada correctamente.</p>" +
-                "<p><strong>Fecha y hora:</strong> " + fechaHora + "</p>" +
-                "<p><strong>Barbería:</strong> " + nombreBarberia + "</p>" +
-                "<p>Esperamos verte pronto.</p>" +
-                "</body></html>";
+    public void enviarCorreoCitaCompletada(String destinatario, String nombreCliente, String nombreBarbero,
+                                           String nombreBarberia, String fechaHora, String servicio, String precio) throws Exception {
+        String asunto = "¡Gracias por tu visita! - BookCut";
+        String cuerpo = EmailTemplates.plantillaCitaCompletada(nombreCliente, nombreBarbero, nombreBarberia,
+                fechaHora, servicio, precio);
+        enviarCorreo(destinatario, asunto, cuerpo);
+    }
 
-        enviarCorreo(destinatario, asunto, cuerpoHtml);
+    public void enviarCorreoRecordatorio24h(String destinatario, String nombreCliente, String nombreBarbero,
+                                            String nombreBarberia, String fechaHora, String servicio, String direccion) throws Exception {
+        String asunto = "⏰ Recordatorio: Cita Mañana - BookCut";
+        String cuerpo = EmailTemplates.plantillaRecordatorio24h(nombreCliente, nombreBarbero, nombreBarberia,
+                fechaHora, servicio, direccion);
+        enviarCorreo(destinatario, asunto, cuerpo);
     }
 }

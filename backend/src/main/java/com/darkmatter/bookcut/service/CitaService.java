@@ -16,9 +16,7 @@ public class CitaService {
 
     private final CitaRepository repositorioDeCitas;
     private final BrevoEmailService emailService;
-    private CitaResponseDTO citaResponseDTO;
 
-    // Constructor para la inyección de dependencias
     public CitaService(CitaRepository repositorioDeCitas, BrevoEmailService emailService) {
         this.repositorioDeCitas = repositorioDeCitas;
         this.emailService = emailService;
@@ -36,7 +34,7 @@ public class CitaService {
                 nuevaCita.getBarberoAsignado(), inicioDelDia, finDelDia);
 
         for (Cita citaExistente : citasDelDia) {
-            if (citaExistente.getEstadoCita() == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+            if (citaExistente.getEstadoCita() == EstadoCita.CANCELADA) {
                 continue;
             }
 
@@ -51,11 +49,26 @@ public class CitaService {
 
         Cita citaGuardada = repositorioDeCitas.save(nuevaCita);
 
-        java.time.format.DateTimeFormatter formateador = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy 'a las' HH:mm");
+        DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd/MM/yyyy 'a las' HH:mm");
         String fechaFormateada = citaGuardada.getFechaHoraCita().format(formateador);
 
         try {
-            emailService.enviarCorreoConfirmacion(citaGuardada.getClienteReserva().getCorreoElectronico(), fechaFormateada);
+            String nombreCliente = citaGuardada.getClienteReserva().getNombre();
+            String correoCliente = citaGuardada.getClienteReserva().getCorreoElectronico();
+            String nombreBarbero = citaGuardada.getBarberoAsignado().getUsuarioAsignado().getNombre();
+            String nombreBarberia = citaGuardada.getBarberoAsignado().getBarberiaAsignada().getNombre();
+            String nombreServicio = citaGuardada.getServicioContratado().getNombreServicio();
+            String precio = String.format("%.2f", citaGuardada.getServicioContratado().getPrecioServicio());
+
+            emailService.enviarCorreoCitaCreada(
+                    correoCliente,
+                    nombreCliente,
+                    nombreBarbero,
+                    nombreBarberia,
+                    fechaFormateada,
+                    nombreServicio,
+                    precio
+            );
         } catch (Exception excepcionCorreo) {
             System.out.println("ERROR al enviar correo: " + excepcionCorreo.getMessage());
         }
@@ -67,7 +80,7 @@ public class CitaService {
         return repositorioDeCitas.findByClienteReserva_IdUsuario(idUsuario);
     }
 
-    public boolean estaBarberoDisponible(Long idBarbero, java.time.LocalDateTime fechaHora) {
+    public boolean estaBarberoDisponible(Long idBarbero, LocalDateTime fechaHora) {
         return !repositorioDeCitas.existsByBarberoAsignado_IdPerfilBarberoAndFechaHoraCita(idBarbero, fechaHora);
     }
 
@@ -86,11 +99,23 @@ public class CitaService {
         cita.setEstadoCita(EstadoCita.CANCELADA);
         repositorioDeCitas.save(cita);
 
+        DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd/MM/yyyy 'a las' HH:mm");
+        String fechaFormateada = cita.getFechaHoraCita().format(formateador);
+
         try {
-            emailService.enviarCorreo(
-                    cita.getClienteReserva().getCorreoElectronico(),
-                    "Cita cancelada",
-                    "Tu cita ha sido cancelada."
+            String nombreCliente = cita.getClienteReserva().getNombre();
+            String correoCliente = cita.getClienteReserva().getCorreoElectronico();
+            String nombreBarbero = cita.getBarberoAsignado().getUsuarioAsignado().getNombre();
+            String nombreBarberia = cita.getBarberoAsignado().getBarberiaAsignada().getNombre();
+            String nombreServicio = cita.getServicioContratado().getNombreServicio();
+
+            emailService.enviarCorreoCitaCancelada(
+                    correoCliente,
+                    nombreCliente,
+                    nombreBarbero,
+                    nombreBarberia,
+                    fechaFormateada,
+                    nombreServicio
             );
         } catch (Exception e) {
             System.out.println("Error enviando correo de cancelación: " + e.getMessage());
@@ -112,48 +137,48 @@ public class CitaService {
         Cita cita = repositorioDeCitas.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
-        com.darkmatter.bookcut.model.EstadoCita estadoActual = cita.getEstadoCita();
-        com.darkmatter.bookcut.model.EstadoCita estadoSolicitado = com.darkmatter.bookcut.model.EstadoCita.valueOf(nuevoEstado.toUpperCase());
+        EstadoCita estadoActual = cita.getEstadoCita();
+        EstadoCita estadoSolicitado = EstadoCita.valueOf(nuevoEstado.toUpperCase());
 
-        if (estadoActual == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA
-                || estadoActual == com.darkmatter.bookcut.model.EstadoCita.CANCELADA
-                || estadoActual == com.darkmatter.bookcut.model.EstadoCita.RECHAZADA
-                || estadoActual == com.darkmatter.bookcut.model.EstadoCita.VENCIDA) {
+        if (estadoActual == EstadoCita.COMPLETADA
+                || estadoActual == EstadoCita.CANCELADA
+                || estadoActual == EstadoCita.RECHAZADA
+                || estadoActual == EstadoCita.VENCIDA) {
             throw new RuntimeException("Error: Una cita " + estadoActual + " es definitiva y no puede cambiar de estado.");
         }
 
-        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.VENCIDA) {
+        if (estadoSolicitado == EstadoCita.VENCIDA) {
             throw new RuntimeException("Error: El estado VENCIDA solo se asigna automáticamente por el sistema.");
         }
 
-        if (estadoActual == com.darkmatter.bookcut.model.EstadoCita.PENDIENTE) {
-            if (estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.ACEPTADA
-                    && estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.RECHAZADA
-                    && estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+        if (estadoActual == EstadoCita.PENDIENTE) {
+            if (estadoSolicitado != EstadoCita.ACEPTADA
+                    && estadoSolicitado != EstadoCita.RECHAZADA
+                    && estadoSolicitado != EstadoCita.CANCELADA) {
                 throw new RuntimeException("Error: Una cita PENDIENTE solo puede pasar a ACEPTADA, RECHAZADA o CANCELADA.");
             }
         }
 
-        if (estadoActual == com.darkmatter.bookcut.model.EstadoCita.ACEPTADA) {
-            if (estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.COMPLETADA
-                    && estadoSolicitado != com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
+        if (estadoActual == EstadoCita.ACEPTADA) {
+            if (estadoSolicitado != EstadoCita.COMPLETADA
+                    && estadoSolicitado != EstadoCita.CANCELADA) {
                 throw new RuntimeException("Error: Una cita ACEPTADA solo puede pasar a COMPLETADA o CANCELADA.");
             }
         }
 
-        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA) {
-            if (java.time.LocalDateTime.now().isBefore(cita.getFechaHoraCita())) {
+        if (estadoSolicitado == EstadoCita.COMPLETADA) {
+            if (LocalDateTime.now().isBefore(cita.getFechaHoraCita())) {
                 throw new RuntimeException("Error: No se puede finalizar una cita antes de que ocurra.");
             }
         }
 
-        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
-            if (java.time.LocalDateTime.now().isAfter(cita.getFechaHoraCita())) {
+        if (estadoSolicitado == EstadoCita.CANCELADA) {
+            if (LocalDateTime.now().isAfter(cita.getFechaHoraCita())) {
                 throw new RuntimeException("Error: No se puede cancelar una cita cuya fecha ya ha pasado.");
             }
         }
 
-        if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.ACEPTADA) {
+        if (estadoSolicitado == EstadoCita.ACEPTADA) {
             if (cita.getServicioContratado() != null && cita.getServicioContratado().getPrecioServicio() != null) {
                 cita.setPrecioFinal(cita.getServicioContratado().getPrecioServicio());
             }
@@ -162,21 +187,55 @@ public class CitaService {
         cita.setEstadoCita(estadoSolicitado);
         Cita citaActualizada = repositorioDeCitas.save(cita);
 
-        // Envío de correos según el nuevo estado
+        DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd/MM/yyyy 'a las' HH:mm");
+        String fechaFormateada = citaActualizada.getFechaHoraCita().format(formateador);
+
         try {
             String nombreCliente = citaActualizada.getClienteReserva().getNombre();
             String correoCliente = citaActualizada.getClienteReserva().getCorreoElectronico();
-            String fechaHora = citaActualizada.getFechaHoraCita().toString();
+            String nombreBarbero = citaActualizada.getBarberoAsignado().getUsuarioAsignado().getNombre();
             String nombreBarberia = citaActualizada.getBarberoAsignado().getBarberiaAsignada().getNombre();
+            String nombreServicio = citaActualizada.getServicioContratado().getNombreServicio();
+            String precio = String.format("%.2f", citaActualizada.getServicioContratado().getPrecioServicio());
 
-            if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.ACEPTADA) {
-                emailService.enviarCorreoCitaAceptada(correoCliente, nombreCliente, fechaHora, nombreBarberia);
-            } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.RECHAZADA) {
-                emailService.enviarCorreoCitaRechazada(correoCliente, nombreCliente, fechaHora, nombreBarberia);
-            } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.COMPLETADA) {
-                emailService.enviarCorreoCitaCompletada(correoCliente, nombreCliente, fechaHora, nombreBarberia);
-            } else if (estadoSolicitado == com.darkmatter.bookcut.model.EstadoCita.CANCELADA) {
-                emailService.enviarCorreoCitaCancelada(correoCliente, nombreCliente, fechaHora, nombreBarberia);
+            if (estadoSolicitado == EstadoCita.ACEPTADA) {
+                emailService.enviarCorreoCitaAceptada(
+                        correoCliente,
+                        nombreCliente,
+                        nombreBarbero,
+                        nombreBarberia,
+                        fechaFormateada,
+                        nombreServicio,
+                        precio
+                );
+            } else if (estadoSolicitado == EstadoCita.RECHAZADA) {
+                emailService.enviarCorreoCitaRechazada(
+                        correoCliente,
+                        nombreCliente,
+                        nombreBarbero,
+                        nombreBarberia,
+                        fechaFormateada,
+                        nombreServicio
+                );
+            } else if (estadoSolicitado == EstadoCita.COMPLETADA) {
+                emailService.enviarCorreoCitaCompletada(
+                        correoCliente,
+                        nombreCliente,
+                        nombreBarbero,
+                        nombreBarberia,
+                        fechaFormateada,
+                        nombreServicio,
+                        precio
+                );
+            } else if (estadoSolicitado == EstadoCita.CANCELADA) {
+                emailService.enviarCorreoCitaCancelada(
+                        correoCliente,
+                        nombreCliente,
+                        nombreBarbero,
+                        nombreBarberia,
+                        fechaFormateada,
+                        nombreServicio
+                );
             }
         } catch (Exception excepcionCorreo) {
             System.err.println("Error al enviar correo: " + excepcionCorreo.getMessage());
@@ -193,20 +252,16 @@ public class CitaService {
         dto.setEstadoCita(cita.getEstadoCita());
         dto.setPrecioFinal(cita.getPrecioFinal());
 
-        // Cliente
         dto.setIdCliente(cita.getClienteReserva().getIdUsuario());
         dto.setNombreCliente(cita.getClienteReserva().getNombre());
         dto.setCorreoCliente(cita.getClienteReserva().getCorreoElectronico());
 
-        // Barbero
         dto.setIdPerfilBarbero(cita.getBarberoAsignado().getIdPerfilBarbero());
         dto.setNombreBarbero(cita.getBarberoAsignado().getUsuarioAsignado().getNombre());
 
-        // Barbería
         dto.setIdBarberia(cita.getBarberoAsignado().getBarberiaAsignada().getIdBarberia());
         dto.setNombreBarberia(cita.getBarberoAsignado().getBarberiaAsignada().getNombre());
 
-        // Servicio
         dto.setIdServicio(cita.getServicioContratado().getIdServicio());
         dto.setNombreServicio(cita.getServicioContratado().getNombreServicio());
         dto.setPrecioServicio(cita.getServicioContratado().getPrecioServicio());
