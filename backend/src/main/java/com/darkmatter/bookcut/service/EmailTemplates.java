@@ -140,8 +140,7 @@ public class EmailTemplates {
             """, nombreUsuario, codigoRecuperacion) + FOOTER;
     }
 
-    public static String plantillaCitaCreada(String nombreCliente, String nombreBarbero, String nombreBarberia,
-                                             String fechaHora, String servicio, String precio) {
+    public static String plantillaCitaCreada(String nombreCliente, String nombreBarbero, String nombreBarberia, String fechaHora, String servicio, String precio) {
         return HEADER + String.format("""
             <h2>Solicitud de Cita Recibida</h2>
             <p>Hola <strong>%s</strong>,</p>
@@ -161,8 +160,7 @@ public class EmailTemplates {
             """, nombreCliente, nombreBarberia, nombreBarbero, fechaHora, servicio, precio) + FOOTER;
     }
 
-    public static String plantillaCitaAceptada(String nombreCliente, String nombreBarbero, String nombreBarberia,
-                                               String fechaHora, String servicio, String precio) {
+    public static String plantillaCitaAceptada(String nombreCliente, String nombreBarbero, String nombreBarberia, String fechaHora, String servicio, String precio) {
         return HEADER + String.format("""
             <h2>¡Cita Confirmada! ✅</h2>
             <p>Hola <strong>%s</strong>,</p>
@@ -184,8 +182,7 @@ public class EmailTemplates {
             """, nombreCliente, nombreBarberia, nombreBarbero, fechaHora, servicio, precio) + FOOTER;
     }
 
-    public static String plantillaCitaRechazada(String nombreCliente, String nombreBarbero, String nombreBarberia,
-                                                String fechaHora, String servicio) {
+    public static String plantillaCitaRechazada(String nombreCliente, String nombreBarbero, String nombreBarberia, String fechaHora, String servicio) {
         return HEADER + String.format("""
             <h2>Cita No Disponible</h2>
             <p>Hola <strong>%s</strong>,</p>
@@ -204,8 +201,7 @@ public class EmailTemplates {
             """, nombreCliente, nombreBarberia, nombreBarbero, fechaHora, servicio) + FOOTER;
     }
 
-    public static String plantillaCitaCancelada(String nombreCliente, String nombreBarbero, String nombreBarberia,
-                                                String fechaHora, String servicio) {
+    public static String plantillaCitaCancelada(String nombreCliente, String nombreBarbero, String nombreBarberia, String fechaHora, String servicio) {
         return HEADER + String.format("""
             <h2>Cita Cancelada</h2>
             <p>Hola <strong>%s</strong>,</p>
@@ -224,8 +220,7 @@ public class EmailTemplates {
             """, nombreCliente, nombreBarberia, nombreBarbero, fechaHora, servicio) + FOOTER;
     }
 
-    public static String plantillaCitaCompletada(String nombreCliente, String nombreBarbero, String nombreBarberia,
-                                                 String fechaHora, String servicio, String precio) {
+    public static String plantillaCitaCompletada(String nombreCliente, String nombreBarbero, String nombreBarberia, String fechaHora, String servicio, String precio) {
         return HEADER + String.format("""
             <h2>¡Gracias por tu visita! 🎉</h2>
             <p>Hola <strong>%s</strong>,</p>
@@ -245,8 +240,7 @@ public class EmailTemplates {
             """, nombreCliente, nombreBarberia, nombreBarbero, fechaHora, servicio, precio) + FOOTER;
     }
 
-    public static String plantillaRecordatorio24h(String nombreCliente, String nombreBarbero, String nombreBarberia,
-                                                  String fechaHora, String servicio, String direccion) {
+    public static String plantillaRecordatorio24h(String nombreCliente, String nombreBarbero, String nombreBarberia, String fechaHora, String servicio, String direccion) {
         return HEADER + String.format("""
             <h2>⏰ Recordatorio de Cita</h2>
             <p>Hola <strong>%s</strong>,</p>

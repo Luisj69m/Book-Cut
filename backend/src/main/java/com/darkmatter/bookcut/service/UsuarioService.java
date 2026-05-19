@@ -54,10 +54,20 @@ public class UsuarioService {
             throw new RuntimeException("El correo ya está registrado");
         }
 
-        // Encriptar contraseña
         nuevoUsuario.setContrasenaUsuario(passwordEncoder.encode(nuevoUsuario.getContrasenaUsuario()));
 
-        return usuarioRepository.save(nuevoUsuario);
+        Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
+
+        try {
+            brevoEmailService.enviarCorreoConfirmacion(
+                    usuarioGuardado.getCorreoElectronico(),
+                    usuarioGuardado.getNombre()
+            );
+        } catch (Exception e) {
+            System.err.println("Error enviando correo de bienvenida: " + e.getMessage());
+        }
+
+        return usuarioGuardado;
     }
 
     public Usuario validarLogin(String correo, String contrasena) {
@@ -118,18 +128,13 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findByCorreoElectronico(correoDestino)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // Generar código
         String codigoRecuperacion = authService.crearTokenRecuperacion(correoDestino);
 
-        // Enviar correo
-        String asunto = "Recuperación de contraseña - BookCut";
-        String cuerpoHtml = "<html><body>" +
-                "<h2>Recuperación de contraseña</h2>" +
-                "<p>Tu código de recuperación es: <strong>" + codigoRecuperacion + "</strong></p>" +
-                "<p>Este código expira en 15 minutos.</p>" +
-                "</body></html>";
-
-        brevoEmailService.enviarCorreo(correoDestino, asunto, cuerpoHtml);
+        brevoEmailService.enviarCorreoRecuperacion(
+                correoDestino,
+                usuario.getNombre(),
+                codigoRecuperacion
+        );
     }
 
     @Transactional

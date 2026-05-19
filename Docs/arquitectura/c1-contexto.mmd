@@ -1,6 +1,0 @@
-flowchart TB
-    User["Cliente"] -->|Reserva citas y consulta horarios| App["Aplicacion de Gestion de Citas"]
-    Barber["Barbero o Peluquero"] -->|Gestiona citas y horarios| App
-    Admin["Administrador"] -->|Configura servicios y personal| App
-    App -->|Envio de recordatorios| Email["Servicio de Email"]
-    App -->|Sincronizacion de calendario| CalendarAPI["API Externa de Calendario"]
