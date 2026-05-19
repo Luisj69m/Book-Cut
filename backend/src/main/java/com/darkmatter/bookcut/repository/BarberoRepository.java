@@ -7,7 +7,7 @@ import java.util.Optional;
 
 @Repository
 public interface BarberoRepository extends JpaRepository<Barbero, Long> {
-    List<Barbero> findByBarberiaAsignadaIdBarberia(Long idBarberia);
+    List<Barbero> findByBarberiaAsignada_IdBarberia(Long idBarberia);
     Optional<Barbero> findByUsuarioAsignadoIdUsuario(Long idUsuario);
     Optional<Barbero> findFirstByBarberiaAsignadaIdBarberia(Long idBarberia);
     Optional<Barbero> findByUsuarioAsignado_CorreoElectronico(String correoElectronico);

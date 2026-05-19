@@ -41,14 +41,25 @@ public class CitaController {
         try {
             Long identificadorBarberia = Long.valueOf(datosPeticion.get("idBarberia").toString());
             Long identificadorServicio = Long.valueOf(datosPeticion.get("idServicio").toString());
+            Long identificadorBarbero = Long.valueOf(datosPeticion.get("idBarbero").toString()); // ← NUEVO PARÁMETRO
             String fechaTexto = datosPeticion.get("fechaHoraCita").toString();
 
             Usuario clienteSolicitante = usuarioService.obtenerUsuarioPorCorreo(correoCliente);
 
             Barberia barberiaEncontrada = barberiaRepository.findById(identificadorBarberia)
                     .orElseThrow(() -> new RuntimeException("La barbería no existe."));
+
             Servicio servicioSolicitado = servicioRepository.findById(identificadorServicio)
                     .orElseThrow(() -> new RuntimeException("El servicio no existe."));
+
+            // ← NUEVO: Buscar el barbero específico seleccionado por el cliente
+            Barbero barberoSeleccionado = barberoRepository.findById(identificadorBarbero)
+                    .orElseThrow(() -> new RuntimeException("El barbero seleccionado no existe."));
+
+            // Validar que el barbero pertenece a la barbería
+            if (!barberoSeleccionado.getBarberiaAsignada().getIdBarberia().equals(identificadorBarberia)) {
+                return ResponseEntity.status(400).body("El barbero seleccionado no pertenece a esta barbería.");
+            }
 
             LocalDateTime fechaProgramada;
             try {
@@ -66,19 +77,15 @@ public class CitaController {
                 return ResponseEntity.status(400).body("Horario no válido. Las reservas solo están permitidas entre las 09:00 y las 22:00.");
             }
 
-            Barbero barberoDisponible = barberoRepository.findFirstByBarberiaAsignadaIdBarberia(identificadorBarberia)
-                    .orElseThrow(() -> new RuntimeException("Esta barbería no tiene barberos asignados."));
-
             Cita citaPreparada = new Cita();
             citaPreparada.setClienteReserva(clienteSolicitante);
             citaPreparada.setServicioContratado(servicioSolicitado);
             citaPreparada.setFechaHoraCita(fechaProgramada);
             citaPreparada.setEstadoCita(EstadoCita.PENDIENTE);
-            citaPreparada.setBarberoAsignado(barberoDisponible);
+            citaPreparada.setBarberoAsignado(barberoSeleccionado); // ← CAMBIO: ahora usa el seleccionado
 
             Cita citaGuardada = citaService.crearNuevaCita(citaPreparada);
 
-            // ✅ CORRECCIÓN: Enviar correo con todos los parámetros requeridos
             try {
                 DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd/MM/yyyy 'a las' HH:mm");
                 String fechaFormateada = citaGuardada.getFechaHoraCita().format(formateador);

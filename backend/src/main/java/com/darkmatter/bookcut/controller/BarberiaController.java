@@ -42,7 +42,8 @@ public class BarberiaController {
     public ResponseEntity<?> guardarOActualizarBarberia(
             @PathVariable String correoBarbero,
             @RequestBody Barberia datosBarberia,
-            @AuthenticationPrincipal String usernameLogueado) { // Cogemos el usuario del Token
+            @AuthenticationPrincipal String usernameLogueado) {
+        // Cogemos el usuario del Token
 
         // 1. PROTECCIÓN PRUEBA 5: ¿Es el dueño de la cuenta?
         if (!correoBarbero.equalsIgnoreCase(usernameLogueado)) {
