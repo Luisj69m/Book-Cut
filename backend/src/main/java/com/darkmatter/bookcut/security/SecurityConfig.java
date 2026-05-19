@@ -46,8 +46,9 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/barberias/mi-barberia/**").hasAnyRole("BARBERO", "ADMIN")
 
                         // AÑADE ESTA LÍNEA:
-                        .requestMatchers("/api/usuarios/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/facturacion/**").hasAnyRole("ADMIN", "BARBERO")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/imagenes/**").permitAll()
 
                         // El resto de la API requiere estar autenticado
                         .anyRequest().authenticated()

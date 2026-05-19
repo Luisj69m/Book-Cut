@@ -1,35 +1,150 @@
-# 💈 BookCut - Gestión Inteligente de Barberías
+# 💈 BookCut - Plataforma de Gestión para Barberías
 
-**BookCut** es una solución integral diseñada para digitalizar la experiencia de reserva en barberías, conectando a clientes y profesionales en tiempo real a través de una arquitectura robusta y escalable.
+BookCut es una solución integral que digitaliza la gestión completa de barberías, conectando clientes, barberos y administradores en tiempo real a través de una arquitectura moderna, escalable y desplegada en la nube.
 
-## 🚀 Estado del MVP (Funcionalidades Clave)
-Actualmente, el proyecto ha completado su ciclo principal de valor:
-- **Reserva en Tiempo Real:** Los clientes pueden solicitar citas enviando datos precisos al backend.
-- **Gestión de Estados (Core):** Implementación de una lógica de estados (`PENDIENTE`, `ACEPTADA`, `RECHAZADA`, `CANCELADA`) mediante un sistema de actualización directa en base de datos.
-- **Sincronización Multi-plataforma:** Comunicación fluida entre el frontend (Flutter) y el servidor (Spring Boot) mediante protocolos REST.
+---
+
+## 🚀 Características Principales
+
+### Sistema de Reservas Inteligente
+- **Reserva en Tiempo Real**: Los clientes solicitan citas que los barberos pueden aceptar o rechazar
+- **Gestión de Estados**: Sistema completo de ciclo de vida de citas (`PENDIENTE`, `ACEPTADA`, `RECHAZADA`, `CANCELADA`, `COMPLETADA`, `VENCIDA`)
+- **Validación de Disponibilidad**: Detección automática de solapamientos de horarios
+- **Recordatorios Automatizados**: Sistema de notificaciones por correo 24h antes de cada cita
+
+### Notificaciones por Email
+- **Plantillas HTML Profesionales**: Correos diseñados con gradientes, badges de estado y contenido estructurado
+- **7 Tipos de Notificaciones**:
+  - Bienvenida al registrarse
+  - Solicitud de cita recibida
+  - Cita confirmada
+  - Cita rechazada
+  - Cita cancelada
+  - Cita completada
+  - Recordatorio 24h antes
+
+### Gestión de Imágenes
+- **Fotos de Barberías**: Sistema de galería con carrusel de imágenes
+- **Fotos de Perfil**: Cada usuario puede subir y personalizar su avatar
+- **Almacenamiento Cloud**: URLs públicas accesibles desde cualquier dispositivo
+
+### Panel de Administración
+- **Gestión de Barberías**: Creación, edición y eliminación de locales
+- **Registro de Barberos**: Asignación de empleados a barberías específicas
+- **Dashboard de Facturación**: Resumen de ingresos filtrable por día, semana, mes o total
+- **Visualización de Citas**: Vista global de todas las reservas por barbería
+
+### Roles y Permisos
+- **ADMIN**: Control total del sistema, gestión de barberías y barberos
+- **BARBERO**: Gestión de sus propias citas, horarios y perfil
+- **CLIENTE**: Reserva de citas, historial personal y gestión de perfil
+
+---
 
 ## 🛠️ Stack Tecnológico
-- **Frontend:** Flutter (Dart) - Interfaz de usuario intuitiva y reactiva.
-- **Backend:** Spring Boot (Java 17+) - API REST con persistencia de datos.
-- **Base de Datos:** MySQL - Modelo relacional optimizado para integridad de citas.
-- **ORM:** Hibernate / JPA - Mapeo de entidades con consultas nativas para actualizaciones críticas.
-- **Túnel de Red:** Ngrok - Exposición segura del servidor local para pruebas en dispositivos físicos.
 
-## 📦 Estructura del Proyecto
-- `/backend`: Lógica de servidor, controladores de citas y repositorios.
-- `/frontend`: Aplicación móvil desarrollada en Flutter.
-- `/docs`: Documentación del diseño, esquemas SQL y manuales de usuario.
-
-## 🔧 Configuración y Despliegue
 ### Backend
-1. Importar el proyecto en IntelliJ/Eclipse.
-2. Configurar el archivo `application.properties` con tus credenciales de MySQL.
-3. Ejecutar la clase principal.
-4. Levantar Ngrok: `ngrok http 8080`.
+- **Framework**: Spring Boot 3.x (Java 17+)
+- **Seguridad**: Spring Security con autenticación JWT
+- **ORM**: JPA / Hibernate
+- **Base de Datos**: PostgreSQL
+- **Migraciones**: Flyway
+- **Email**: Brevo REST API
+- **Almacenamiento**: Supabase Storage
 
 ### Frontend
-1. Cambiar la `baseUrl` en el servicio de Flutter por la URL generada por Ngrok.
-2. Ejecutar `flutter run`.
+- **Panel Admin**: React
+- **App Móvil**: Flutter
+
+---
+
+## 📦 Arquitectura del Proyecto
+bookcut-backend/
+├── src/main/java/com/darkmatter/bookcut/
+│   ├── controller/          # Endpoints REST
+│   ├── model/               # Entidades JPA
+│   ├── repository/          # Acceso a datos
+│   ├── service/             # Lógica de negocio
+│   ├── DTO/                 # Objetos de transferencia
+│   ├── security/            # Configuración JWT
+│   └── config/              # Configuración Spring
+└── src/main/resources/
+└── application.properties
+
+---
+
+## 🗄️ Modelo de Datos
+
+### Entidades Principales
+
+**Usuario**
+- Datos personales, rol, contraseña encriptada (BCrypt), foto de perfil
+
+**Barberia**
+- Información del local, dirección, horarios, descripción, imagen
+
+**Barbero**
+- Perfil profesional vinculado a usuario y barbería
+
+**Cita**
+- Relación entre cliente, barbero y servicio con gestión de estados
+
+**Servicio**
+- Tratamientos ofrecidos con precio y duración
+
+---
+
+## 🔐 Seguridad
+
+### Autenticación JWT
+- Token generado al login
+- Contraseñas encriptadas con BCrypt
+
+### Políticas de Acceso
+- **Rutas Públicas**: Login, registro, listado de barberías
+- **Solo ADMIN**: Gestión de sistema y barberos
+- **ADMIN o BARBERO**: Facturación y gestión de barberías
+- **Autenticado**: Gestión de perfil y citas
+
+---
+
+## 📡 API REST Endpoints
+
+### Autenticación
+- `POST /api/usuarios/login` - Iniciar sesión
+- `POST /api/usuarios/registrar` - Registro
+- Recuperación de contraseña
+
+### Gestión
+- Usuarios y perfiles
+- Barberías y barberos
+- Citas y servicios
+- Imágenes (barberías y perfiles)
+- Dashboard de facturación
+
+---
+
+## 📧 Sistema de Notificaciones
+
+- Plantillas HTML responsive
+- Envío automático según estado de cita
+- Recordatorios programados 24h antes
+- Branding corporativo
+
+---
 
 ## 👥 Equipo
-- Iván, Luis y Daniel.
+
+- **Iván Rubio** - Backend (Spring Boot, Arquitectura, Base de Datos, Seguridad)
+- **Luis** - Frontend Admin (React, Panel de gestión, Dashboard)
+- **Daniel** - Frontend Móvil (Flutter, App de clientes y barberos)
+
+---
+
+## 📄 Licencia
+
+MIT License - Ver archivo `LICENSE` para más detalles.
+
+---
+
+**Proyecto desarrollado como Trabajo de Fin de Grado - 2026**

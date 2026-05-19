@@ -27,6 +27,8 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
             java.time.LocalDateTime fechaFin
     );
 
+
+
     // ESTA ES LA LÍNEA CLAVE: He cambiado PerfilBarbero por Barbero para que coincida con tu modelo
     boolean existsByBarberoAsignado_IdPerfilBarberoAndFechaHoraCita(Long idBarbero, LocalDateTime fechaHora);
 
