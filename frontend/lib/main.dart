@@ -19,14 +19,14 @@ class BookcutApp extends StatelessWidget {
       // Configuramos el tema visual de toda la aplicación
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF381483), // Vuestro morado oscuro
-          primary: const Color(0xFFE96D71),   // Vuestro rojizo/salmón
+          seedColor: const Color(0xFF381483),
+          primary: const Color(0xFFE96D71),
         ),
-        useMaterial3: true, // Usa las animaciones y estilos más modernos de Flutter
+        useMaterial3: true, // Usa las animaciones
       ),
 
       // Aquí le decimos que la primera pantalla que debe abrir es el Splash
-      home: SplashScreen(),
+      home: const SplashScreen(),
     );
   }
 }

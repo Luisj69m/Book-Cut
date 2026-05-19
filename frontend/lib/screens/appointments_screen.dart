@@ -4,7 +4,7 @@ import '../services/api_service.dart';
 import 'package:frontend/utils/api_config.dart';
 import 'profile_client_screen.dart';
 import 'settings_screen.dart';
-import '../utils/glass_toast.dart'; // ✅ IMPORTAMOS NUESTRO TOAST PREMIUM
+import '../utils/glass_toast.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   final int idUsuarioCliente;
@@ -43,13 +43,15 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
     super.dispose();
   }
 
+  //  ACTUALIZADO: AHORA LEE LA URL DIRECTA DE SUPABASE COMO EN EL HOME
   Future<void> _cargarFotoPerfil() async {
     try {
       final datos = await _apiService.getPerfil();
-      final nombreArchivo = datos['urlFotoPerfil'];
-      if (nombreArchivo != null && nombreArchivo.isNotEmpty) {
+      final urlFoto = datos['urlFotoPerfil'];
+
+      if (mounted) {
         setState(() {
-          _fotoUrlServidor = "${ApiConfig.baseUrl}/perfil/imagen/$nombreArchivo";
+          _fotoUrlServidor = urlFoto;
         });
       }
     } catch (e) {
@@ -82,7 +84,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        // ✅ USAMOS GLASS TOAST PARA EL ERROR
         GlassToast.showError(context, "Error", "No se pudieron cargar las citas");
       }
     }
@@ -91,15 +92,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
   Future<void> _ejecutarCancelacion(int idCita) async {
     setState(() => _isLoading = true);
     try {
-      // 🛡️ AÑADIMOS EL TIMEOUT DE 6 SEGUNDOS PARA QUE NO SE CUELGUE CON EL EMAIL
       bool exito = await _apiService.cancelarCitaDefinitiva(idCita).timeout(
-        const Duration(seconds: 6),
+        const Duration(seconds: 10),
         onTimeout: () => true, // Forzamos el éxito si hay retraso por el correo
       );
 
       if (exito) {
         if (mounted) {
-          // ✅ GLASS TOAST DE ÉXITO
           GlassToast.showSuccess(context, "Cita Cancelada", "Tu reserva ha sido anulada correctamente.");
         }
         await _cargarMisCitas();
@@ -108,7 +107,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
       }
     } catch (e) {
       if (mounted) {
-        // ✅ GLASS TOAST DE AVISO/WARNING
         GlassToast.showWarning(context, "Aviso", "La cita se canceló pero el servidor tardó en responder.");
         await _cargarMisCitas();
       }
@@ -610,8 +608,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTick
           width: 34, height: 34,
           decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isActive ? Colors.white : Colors.white70, width: 1.5)),
           child: ClipOval(
-            child: _fotoUrlServidor != null
-                ? Image.network(_fotoUrlServidor!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: Colors.white.withOpacity(0.2), child: const Icon(Icons.person, color: Colors.white, size: 20)))
+            child: _fotoUrlServidor != null && _fotoUrlServidor!.isNotEmpty
+                ? Image.network(
+                _fotoUrlServidor!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(color: Colors.white.withOpacity(0.2), child: const Icon(Icons.person, color: Colors.white, size: 20))
+            )
                 : Container(color: Colors.white.withOpacity(0.2), child: const Icon(Icons.person, color: Colors.white, size: 20)),
           ),
         ),

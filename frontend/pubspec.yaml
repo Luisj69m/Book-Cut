@@ -12,10 +12,11 @@ dependencies:
   http: ^1.6.0
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.5
-  image_picker: ^1.0.4
+  image_picker: ^1.2.2
   supabase_flutter: ^2.12.4
   fl_chart: ^0.70.2
   url_launcher: ^6.3.2
+  intl_phone_field: ^3.2.0
 
 dev_dependencies:
   flutter_test:

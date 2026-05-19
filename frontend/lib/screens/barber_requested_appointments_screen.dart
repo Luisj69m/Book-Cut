@@ -1,8 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import '../utils/glass_toast.dart'; // ✅ AÑADIDO PARA NOTIFICACIONES PREMIUM
-import 'settings_screen.dart'; // Asegúrate de tener esto importado para la navbar
+import '../utils/glass_toast.dart';
+import 'settings_screen.dart';
 
 class BarberRequestedAppointmentsScreen extends StatefulWidget {
   final int idUsuarioBarbero;
@@ -78,7 +78,7 @@ class _BarberRequestedAppointmentsScreenState extends State<BarberRequestedAppoi
     }
   }
 
-  // 🎨 ETIQUETAS DE ESTADO ADAPTADAS AL MODO OSCURO
+  //  ETIQUETAS DE ESTADO ADAPTADAS AL MODO OSCURO
   Widget _buildEstadoBadge(String estadoRaw) {
     String estado = estadoRaw.toUpperCase();
     Color bgColor;

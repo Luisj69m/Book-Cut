@@ -6,7 +6,7 @@ import '../utils/glass_toast.dart';
 import 'settings_screen.dart';
 
 class ServicesBarberScreen extends StatefulWidget {
-  final int idUsuarioBarbero; // ✅ AÑADIDO PARA LOS AJUSTES
+  final int idUsuarioBarbero;
 
   const ServicesBarberScreen({super.key, required this.idUsuarioBarbero});
 
@@ -20,7 +20,7 @@ class _ServicesBarberScreenState extends State<ServicesBarberScreen> {
   List<dynamic> _servicios = [];
   int? _miBarberiaId;
 
-  // Colores corporativos (Paleta Dark Mode del Barbero)
+  // Colores corporativos
   final mainColor = const Color(0xFF381483);
   final accentColor = const Color(0xFFE96D71);
   final accentBlue = const Color(0xFF2962FF);
@@ -528,7 +528,7 @@ class _ServicesBarberScreenState extends State<ServicesBarberScreen> {
               _buildNavItem(Icons.home_rounded, false, () => Navigator.pop(context)),
               _buildNavItem(Icons.content_cut_rounded, true, () {}),
 
-              // ✅ BOTÓN DE AJUSTES CONECTADO CORRECTAMENTE
+
               _buildNavItem(Icons.settings_rounded, false, () {
                 Navigator.pushReplacement(
                   context,

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../services/api_service.dart';
-import '../models/cita_request.dart';
 import '../utils/glass_toast.dart';
 
 class CalendarClientScreen extends StatefulWidget {
@@ -12,10 +11,12 @@ class CalendarClientScreen extends StatefulWidget {
   final String barberiaDescripcion;
   final int idCliente;
 
-  // ✅ NUEVOS PARÁMETROS DEL SERVICIO
+
   final int idServicio;
   final String nombreServicio;
   final String precioServicio;
+  final int idBarbero;
+  final String nombreBarbero;
 
   const CalendarClientScreen({
     super.key,
@@ -28,6 +29,8 @@ class CalendarClientScreen extends StatefulWidget {
     required this.idServicio,
     required this.nombreServicio,
     required this.precioServicio,
+    required this.idBarbero,
+    required this.nombreBarbero,
   });
 
   @override
@@ -122,33 +125,26 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
     return { "Mañana": manana, "Tarde": tarde };
   }
 
-  // 🔴 LÓGICA DE RESERVA MOVIDA AQUÍ 🔴
+  //  LÓGICA DE RESERVA
   void _confirmarReserva() async {
     // Cerramos el Pop-up primero para no tener problemas de contexto
     Navigator.pop(context);
 
-    // Podrías poner un loading aquí si lo deseas
-
     try {
       final String fechaSola = "${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}";
 
-      int dia = _selectedDate.day;
-      int mes = _selectedDate.month;
-      int anio = _selectedDate.year;
+      //  Formatear la fecha : "2026-05-25T15:00:00"
+      final String mesIso = _selectedDate.month.toString().padLeft(2, '0');
+      final String diaIso = _selectedDate.day.toString().padLeft(2, '0');
+      final String fechaHoraBackend = "${_selectedDate.year}-$mesIso-${diaIso}T$_selectedTime:00";
 
-      List<String> horaPartes = _selectedTime!.split(':');
-      int hora = int.parse(horaPartes[0]);
-      int min = int.parse(horaPartes[1]);
-
-      DateTime fechaHoraSeleccionada = DateTime(anio, mes, dia, hora, min);
-
-      final reserva = CitaRequest(
-        idBarberia: widget.barberiaId,
-        idServicio: widget.idServicio,
-        fechaHora: fechaHoraSeleccionada,
-      );
-
-      await _apiService.reservarCita(reserva).timeout(const Duration(seconds: 6), onTimeout: () {
+      //  Llamamos a método crearCita con el idBarbero
+      await _apiService.crearCita(
+        widget.barberiaId,
+        widget.idServicio,
+        widget.idBarbero, // EL NUEVO CAMPO OBLIGATORIO
+        fechaHoraBackend,
+      ).timeout(const Duration(seconds: 6), onTimeout: () {
         return true;
       });
 
@@ -156,7 +152,7 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
         GlassToast.showSuccess(
             context,
             "¡Reserva confirmada!",
-            "Te esperamos el día $fechaSola a las $_selectedTime"
+            "Te esperamos el día $fechaSola a las $_selectedTime con ${widget.nombreBarbero}"
         );
         Navigator.popUntil(context, (route) => route.isFirst); // Volvemos al inicio
       }
@@ -168,7 +164,7 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
     }
   }
 
-  // 🔴 POP-UP INTACTO MOVIDO AQUÍ 🔴
+  //  POP-UP ACTUALIZADO (Muestra el barbero elegido)
   void _mostrarDialogoConfirmacion() {
     final String fechaSola = "${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}";
 
@@ -214,6 +210,11 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                       children: [
                         _buildResumeRow(Icons.content_cut_rounded, "Servicio", widget.nombreServicio),
                         Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Divider(height: 1, color: Colors.white.withOpacity(0.1))),
+
+
+                        _buildResumeRow(Icons.person_rounded, "Profesional", widget.nombreBarbero),
+                        Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Divider(height: 1, color: Colors.white.withOpacity(0.1))),
+
                         _buildResumeRow(Icons.calendar_today_rounded, "Fecha", "$fechaSola a las $_selectedTime"),
                         Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Divider(height: 1, color: Colors.white.withOpacity(0.1))),
                         _buildResumeRow(Icons.storefront_rounded, "Lugar", widget.barberiaNombre),
@@ -237,7 +238,7 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       ),
-                      onPressed: _confirmarReserva, // ✅ LLAMA A LA RESERVA DIRECTA
+                      onPressed: _confirmarReserva,
                       child: const Text("Confirmar Reserva", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                     ),
                   ),
@@ -472,7 +473,7 @@ class _CalendarClientScreenState extends State<CalendarClientScreen> {
                                 shadowColor: deepPurple.withOpacity(0.5),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                               ),
-                              onPressed: _selectedTime == null ? null : _mostrarDialogoConfirmacion, // ✅ AHORA ABRE EL DIÁLOGO
+                              onPressed: _selectedTime == null ? null : _mostrarDialogoConfirmacion,
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [

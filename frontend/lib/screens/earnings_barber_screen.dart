@@ -6,7 +6,7 @@ import '../utils/glass_toast.dart';
 import 'settings_screen.dart';
 
 class EarningsBarberScreen extends StatefulWidget {
-  final int idUsuarioBarbero; // ✅ AÑADIDO PARA PODER ABRIR LOS AJUSTES
+  final int idUsuarioBarbero;
 
   const EarningsBarberScreen({super.key, required this.idUsuarioBarbero});
 
@@ -343,7 +343,7 @@ class _EarningsBarberScreenState extends State<EarningsBarberScreen> {
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  getDrawingHorizontalLine: (_) => FlLine(color: Colors.white.withOpacity(0.1), strokeWidth: 1), // Líneas sutiles
+                  getDrawingHorizontalLine: (_) => FlLine(color: Colors.white.withOpacity(0.1), strokeWidth: 1),
                 ),
                 borderData: FlBorderData(show: false),
                 barGroups: List.generate(mesesConDatos.length, (index) {
@@ -449,7 +449,7 @@ class _EarningsBarberScreenState extends State<EarningsBarberScreen> {
               _buildNavItem(Icons.home_rounded, false, () => Navigator.pop(context)),
               _buildNavItem(Icons.leaderboard_rounded, true, () {}), // Marcado activo
 
-              // ✅ CONECTADO CORRECTAMENTE A SETTINGS
+              //  CONECTADO  A SETTINGS
               _buildNavItem(Icons.settings_rounded, false, () {
                 Navigator.pushReplacement(
                   context,
@@ -472,7 +472,7 @@ class _EarningsBarberScreenState extends State<EarningsBarberScreen> {
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isActive ? neonCyan.withOpacity(0.2) : Colors.transparent, // Resalte cyan para finanzas
+          color: isActive ? neonCyan.withOpacity(0.2) : Colors.transparent,
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: isActive ? neonCyan : Colors.white70, size: 26),

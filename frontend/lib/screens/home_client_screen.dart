@@ -1,11 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'services_client_screen.dart'; // ✅ AHORA IMPORTAMOS SERVICIOS
 import 'appointments_screen.dart';
 import 'settings_screen.dart';
 import 'profile_client_screen.dart';
 import 'package:frontend/services/api_service.dart';
 import 'package:frontend/utils/api_config.dart';
+import 'services_client_screen.dart';
 
 class HomeClientScreen extends StatefulWidget {
   final int idUsuarioCliente;
@@ -21,12 +21,15 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
   String? _fotoUrlServidor;
   String? _userName;
 
+  // VARIABLES PARA LAS BARBERÍAS REALES
   List<dynamic> _barberias = [];
   bool _isLoadingBarberias = true;
   int _activeCategoryIndex = 0;
 
+  // Categorías
   final List<String> _categories = ["Todos", "Cortes", "Barba", "Color", "Tratamientos"];
 
+  // NUESTRA PISCINA DE FOTOS PREMIUM DE BARBERÍAS
   final List<String> _fotosAleatorias = [
     "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=500&auto=format&fit=crop&q=60",
     "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=500&auto=format&fit=crop&q=60",
@@ -50,9 +53,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
 
       if (mounted) {
         setState(() {
-          _fotoUrlServidor = nombreArchivo != null && nombreArchivo.isNotEmpty
-              ? "${ApiConfig.baseUrl}/perfil/imagen/$nombreArchivo"
-              : null;
+          _fotoUrlServidor = nombreArchivo;
           _userName = nombre ?? 'Usuario';
         });
       }
@@ -77,6 +78,14 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
         setState(() => _isLoadingBarberias = false);
       }
     }
+  }
+
+  String _obtenerImagenBarberia(dynamic barberia, int id) {
+    final String urlBD = barberia['urlImagen'] ?? '';
+    if (urlBD.isNotEmpty) {
+      return urlBD;
+    }
+    return _fotosAleatorias[id % _fotosAleatorias.length];
   }
 
   final Color deepPurple = const Color(0xFF381483);
@@ -119,29 +128,55 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // --- HEADER CON PERFIL CLICABLE ---
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 15, 20, 20),
-                      child: Row(
-                        children: [
-                          _buildProfilePictureView(),
-                          const SizedBox(width: 15),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      child: GestureDetector(
+                        // ✅ AL TOCAR LA FOTO O EL NOMBRE, VAMOS AL PERFIL
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const ProfileClientScreen()),
+                          ).then((_) => _cargarFotoPerfil()); // Refresca la foto al volver
+                        },
+                        child: Container(
+                          color: Colors.transparent, // Área clicable completa
+                          child: Row(
                             children: [
-                              Text("Bienvenido,", style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13)),
-                              Text(_userName ?? 'Usuario', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                              _buildProfilePictureView(),
+                              const SizedBox(width: 15),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("Bienvenido,", style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13)),
+                                  Text(_userName ?? 'Usuario', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
                             ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
+
+                    // --- BUSCADOR DESPLEGABLE (AUTOCOMPLETE) ---
                     _buildSearchDropdownView(),
                     const SizedBox(height: 25),
-                    if (_barberias.isNotEmpty) _buildHeroCard(_barberias[0]),
+
+                    // --- TARJETA HERO (Siempre se muestra la primera de la BD) ---
+                    if (_barberias.isNotEmpty)
+                      _buildHeroCard(_barberias[0]),
+
                     const SizedBox(height: 25),
+
+                    // --- CATEGORÍAS ---
                     _buildCategoriesChipsView(),
                     const SizedBox(height: 25),
-                    if (_barberias.length > 1) _buildHorizontalSquareCards(),
+
+                    // --- TARJETAS CUADRADAS HORIZONTALES ---
+                    if (_barberias.length > 1)
+                      _buildHorizontalSquareCards(),
+
+                    // --- LISTA VERTICAL FINAL ---
                     if (_barberias.length > 3) ...[
                       const SizedBox(height: 30),
                       const Padding(
@@ -161,13 +196,17 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     );
   }
 
+  // --- WIDGET DE BUSCADOR CON DESPLEGABLE (AUTOCOMPLETE) ---
   Widget _buildSearchDropdownView() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Autocomplete<Map<String, dynamic>>(
         optionsBuilder: (TextEditingValue textEditingValue) {
-          if (textEditingValue.text.isEmpty) return const Iterable<Map<String, dynamic>>.empty();
+          if (textEditingValue.text.isEmpty) {
+            return const Iterable<Map<String, dynamic>>.empty();
+          }
           final query = textEditingValue.text.toLowerCase();
+
           return _barberias.where((barberia) {
             final nombre = (barberia['nombre'] ?? '').toLowerCase();
             final zona = (barberia['zona'] ?? '').toLowerCase();
@@ -177,7 +216,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
         displayStringForOption: (Map<String, dynamic> option) => option['nombre'] ?? '',
         onSelected: (Map<String, dynamic> seleccion) {
           final int id = seleccion['id'] ?? seleccion['idBarberia'] ?? 0;
-          final String imageUrl = _fotosAleatorias[id % _fotosAleatorias.length];
+          final String imageUrl = _obtenerImagenBarberia(seleccion, id);
           _navegarABarberia(seleccion, imageUrl);
         },
         fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
@@ -209,7 +248,9 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                   color: Colors.black.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: Colors.white.withOpacity(0.2), width: 1.5),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 5))],
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 5))
+                  ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
@@ -229,10 +270,18 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                             decoration: BoxDecoration(color: accentLilac.withOpacity(0.2), shape: BoxShape.circle),
                             child: Icon(Icons.storefront_rounded, color: accentLilac, size: 20),
                           ),
-                          title: Text(option['nombre'] ?? 'Sin nombre', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                          subtitle: Text(option['zona'] ?? '', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
+                          title: Text(
+                            option['nombre'] ?? 'Sin nombre',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                          subtitle: Text(
+                            option['zona'] ?? '',
+                            style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+                          ),
                           trailing: Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.3)),
-                          onTap: () => onSelected(option),
+                          onTap: () {
+                            onSelected(option);
+                          },
                         );
                       },
                     ),
@@ -246,11 +295,13 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     );
   }
 
+  // --- RESTO DE WIDGETS ---
+
   Widget _buildHeroCard(dynamic barberia) {
     final int id = barberia['id'] ?? barberia['idBarberia'] ?? 0;
     final String nombre = barberia['nombre'] ?? 'Sin nombre';
     final String ubicacion = barberia['direccionCompleta'] ?? barberia['direccion'] ?? 'Ubicación desconocida';
-    final String imageUrl = _fotosAleatorias[id % _fotosAleatorias.length];
+    final String imageUrl = _obtenerImagenBarberia(barberia, id);
 
     return GestureDetector(
       onTap: () => _navegarABarberia(barberia, imageUrl),
@@ -259,16 +310,33 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
         height: 220,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(30),
-          image: DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover),
+          color: Colors.black.withOpacity(0.2), // Fondo de respaldo
           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 10))],
         ),
         child: Stack(
           children: [
             Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Image.network(_fotosAleatorias[id % _fotosAleatorias.length], fit: BoxFit.cover);
+                  },
+                ),
+              ),
+            ),
+            Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(30),
-                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.8)], stops: const [0.4, 1.0]),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                    stops: const [0.4, 1.0],
+                  ),
                 ),
               ),
             ),
@@ -277,7 +345,13 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), borderRadius: BorderRadius.circular(15)),
-                child: Row(children: const [Icon(Icons.star_rounded, color: Colors.amber, size: 16), SizedBox(width: 4), Text("4.9", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))]),
+                child: Row(
+                  children: const [
+                    Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                    SizedBox(width: 4),
+                    Text("4.9", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ],
+                ),
               ),
             ),
             Positioned(
@@ -293,7 +367,11 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
             ),
             Positioned(
               bottom: 15, right: 15,
-              child: Container(width: 45, height: 45, decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle), child: const Icon(Icons.arrow_outward_rounded, color: Colors.white)),
+              child: Container(
+                width: 45, height: 45,
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                child: const Icon(Icons.arrow_outward_rounded, color: Colors.white),
+              ),
             )
           ],
         ),
@@ -317,17 +395,37 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
           final int id = barberia['id'] ?? barberia['idBarberia'] ?? 0;
           final String nombre = barberia['nombre'] ?? 'Sin nombre';
           final String ubicacion = barberia['zona'] ?? 'Local';
-          final String imageUrl = _fotosAleatorias[(id + 1) % _fotosAleatorias.length];
+          final String imageUrl = _obtenerImagenBarberia(barberia, id + 1);
 
           return GestureDetector(
             onTap: () => _navegarABarberia(barberia, imageUrl),
             child: Container(
               width: 160,
               margin: const EdgeInsets.symmetric(horizontal: 5),
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(25), image: DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover)),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(25),
+                color: Colors.black.withOpacity(0.2),
+              ),
               child: Stack(
                 children: [
-                  Positioned.fill(child: Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(25), gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.8)])))),
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(25),
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Image.network(_fotosAleatorias[(id + 1) % _fotosAleatorias.length], fit: BoxFit.cover),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(25),
+                        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.8)]),
+                      ),
+                    ),
+                  ),
                   Positioned(
                     bottom: 15, left: 15, right: 40,
                     child: Column(
@@ -339,7 +437,14 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                       ],
                     ),
                   ),
-                  Positioned(bottom: 10, right: 10, child: Container(width: 35, height: 35, decoration: BoxDecoration(color: pinkAccent, shape: BoxShape.circle), child: const Icon(Icons.add, color: Colors.white, size: 20)))
+                  Positioned(
+                    bottom: 10, right: 10,
+                    child: Container(
+                      width: 35, height: 35,
+                      decoration: BoxDecoration(color: pinkAccent, shape: BoxShape.circle),
+                      child: const Icon(Icons.add, color: Colors.white, size: 20),
+                    ),
+                  )
                 ],
               ),
             ),
@@ -362,17 +467,29 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
         final int id = barberia['id'] ?? barberia['idBarberia'] ?? 0;
         final String nombre = barberia['nombre'] ?? 'Sin nombre';
         final String ubicacion = barberia['zona'] ?? 'Local';
-        final String imageUrl = _fotosAleatorias[(id + 2) % _fotosAleatorias.length];
+        final String imageUrl = _obtenerImagenBarberia(barberia, id + 2);
 
         return GestureDetector(
           onTap: () => _navegarABarberia(barberia, imageUrl),
           child: Container(
             margin: const EdgeInsets.only(left: 20, right: 20, bottom: 15),
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: Colors.black.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: Row(
               children: [
-                ClipRRect(borderRadius: BorderRadius.circular(15), child: Image.network(imageUrl, width: 70, height: 70, fit: BoxFit.cover)),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: Image.network(
+                    imageUrl,
+                    width: 70,
+                    height: 70,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Image.network(_fotosAleatorias[(id + 2) % _fotosAleatorias.length], width: 70, height: 70, fit: BoxFit.cover),
+                  ),
+                ),
                 const SizedBox(width: 15),
                 Expanded(
                   child: Column(
@@ -384,7 +501,11 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                     ],
                   ),
                 ),
-                Container(padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8), decoration: BoxDecoration(color: pinkAccent, borderRadius: BorderRadius.circular(12)), child: const Text("Reservar", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                  decoration: BoxDecoration(color: pinkAccent, borderRadius: BorderRadius.circular(12)),
+                  child: const Text("Reservar", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                )
               ],
             ),
           ),
@@ -393,7 +514,6 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     );
   }
 
-  // ✅ AHORA NAVEGA A SERVICES EN LUGAR DE CALENDAR
   void _navegarABarberia(dynamic barberia, String fotoUrl) {
     Navigator.push(
       context,
@@ -405,6 +525,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
           barberiaZona: barberia['zona'] ?? '',
           barberiaDescripcion: barberia['descripcion'] ?? 'Barbería Clásica',
           idCliente: widget.idUsuarioCliente,
+          barberiaImagenUrl: fotoUrl,
         ),
       ),
     );
@@ -439,7 +560,9 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
             child: ChoiceChip(
               label: Text(_categories[index]),
               selected: isSelected,
-              onSelected: (selected) => setState(() => _activeCategoryIndex = selected ? index : _activeCategoryIndex),
+              onSelected: (selected) {
+                setState(() => _activeCategoryIndex = selected ? index : _activeCategoryIndex);
+              },
               selectedColor: pinkAccent,
               backgroundColor: Colors.black.withOpacity(0.2),
               labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.white.withOpacity(0.7), fontSize: 14, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
@@ -462,14 +585,22 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
         filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-          decoration: BoxDecoration(color: Colors.black.withOpacity(0.3), borderRadius: BorderRadius.circular(40), border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5)),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(40),
+            border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(Icons.home_rounded, 0, activeIndex, () {}),
-              _buildNavItem(Icons.receipt_long_rounded, 1, activeIndex, () { Navigator.push(context, MaterialPageRoute(builder: (context) => AppointmentsScreen(idUsuarioCliente: widget.idUsuarioCliente))); }),
+              _buildNavItem(Icons.receipt_long_rounded, 1, activeIndex, () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => AppointmentsScreen(idUsuarioCliente: widget.idUsuarioCliente)));
+              }),
               _buildProfileNavItem(2, activeIndex),
-              _buildNavItem(Icons.settings_rounded, 3, activeIndex, () { Navigator.push(context, MaterialPageRoute(builder: (context) => SettingsScreen(idCliente: widget.idUsuarioCliente))); }),
+              _buildNavItem(Icons.settings_rounded, 3, activeIndex, () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => SettingsScreen(idCliente: widget.idUsuarioCliente)));
+              }),
             ],
           ),
         ),
@@ -484,7 +615,10 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: isActive ? pinkAccent : Colors.transparent, shape: BoxShape.circle),
+        decoration: BoxDecoration(
+          color: isActive ? pinkAccent : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
         child: Icon(icon, color: isActive ? Colors.white : Colors.white70, size: 26),
       ),
     );
@@ -493,7 +627,9 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
   Widget _buildProfileNavItem(int index, int activeIndex) {
     final isActive = index == activeIndex;
     return GestureDetector(
-      onTap: () { Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileClientScreen())).then((_) => _cargarFotoPerfil()); },
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileClientScreen())).then((_) => _cargarFotoPerfil());
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.all(4),

@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
-import 'settings_screen.dart'; // Asegúrate de importarlo para la navbar
+import '../utils/glass_toast.dart';
+import 'settings_screen.dart';
 
 class MiBarberiaScreen extends StatefulWidget {
   final int idUsuarioBarbero;
@@ -17,7 +20,7 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
   bool _isLoading = true;
   final ApiService _apiService = ApiService();
 
-  // Colores corporativos (Paleta Dark Mode)
+  // Colores corporativos
   final mainColor = const Color(0xFF381483);
   final accentColor = const Color(0xFFE96D71);
   final accentBlue = const Color(0xFF2962FF);
@@ -28,6 +31,10 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
   final TextEditingController _zonaController = TextEditingController();
   final TextEditingController _horarioController = TextEditingController();
   final TextEditingController _descripcionController = TextEditingController();
+
+  int? _idBarberia;
+  String? _urlImagen;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -44,6 +51,8 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
         final datos = await _apiService.getBarberiaAsignada(correo);
         if (datos != null && mounted) {
           setState(() {
+            _idBarberia = datos['id'] ?? datos['idBarberia'];
+            _urlImagen = datos['urlImagen'];
             _nombreController.text = datos['nombre'] ?? 'Sin nombre';
             _direccionController.text = datos['direccionCompleta'] ?? datos['direccion'] ?? 'Sin dirección';
             _zonaController.text = datos['zona'] ?? 'Sin zona';
@@ -56,6 +65,49 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
       print("Error cargando barbería: $e");
     }
     if (mounted) setState(() => _isLoading = false);
+  }
+
+  // ✅ LÓGICA DE SUBIDA FUSIONADA CON EL CÓDIGO DE LA IA DE IVÁN
+  Future<void> _seleccionarYSubirImagen() async {
+    try {
+      // 1. Seleccionar imagen (Código de Iván)
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+
+      if (image == null) {
+        print('No se seleccionó ninguna imagen');
+        return;
+      }
+
+      print('Imagen seleccionada: ${image.path}');
+
+      if (_idBarberia == null) {
+        print(' Error: No se encontró el ID de la barbería');
+        GlassToast.showError(context, "Error", "No se encontró el ID de tu barbería.");
+        return;
+      }
+
+      setState(() => _isLoading = true);
+
+      // 2. Subir imagen (Llama a nuestra función adaptada en ApiService)
+      final String? urlSubida = await _apiService.subirImagenBarberia(File(image.path));
+
+      if (urlSubida != null) {
+        // 3. Asignar imagen a la barbería
+        final exito = await _apiService.asignarImagenABarberia(_idBarberia!, urlSubida);
+
+        if (exito && mounted) {
+          setState(() { _urlImagen = urlSubida; });
+          GlassToast.showSuccess(context, "¡Genial!", "La foto de tu barbería se ha actualizado.");
+        } else if (mounted) {
+          GlassToast.showError(context, "Error", "Se subió la foto pero falló la asignación.");
+        }
+      }
+    } catch (e) {
+      print(' Excepción global en _seleccionarYSubirImagen: $e');
+      if (mounted) GlassToast.showError(context, "Error técnico", "Revisa la consola para más detalles.");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -117,7 +169,7 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
                         ),
                         child: Column(
                           children: [
-                            // Cabecera del contenedor (Datos rápidos)
+                            // Cabecera del contenedor (Datos rápidos y FOTO)
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
@@ -127,24 +179,50 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  Container(
-                                    width: 50, height: 50,
-                                    decoration: BoxDecoration(
-                                        color: accentColor.withOpacity(0.2),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: accentColor, width: 1.5),
-                                        boxShadow: [BoxShadow(color: accentColor.withOpacity(0.3), blurRadius: 10)]
+                                  //  AVATAR CON CÁMARA PARA SUBIR FOTO
+                                  GestureDetector(
+                                    onTap: _seleccionarYSubirImagen,
+                                    child: Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        Container(
+                                          width: 65, height: 65,
+                                          decoration: BoxDecoration(
+                                              color: accentColor.withOpacity(0.2),
+                                              shape: BoxShape.circle,
+                                              border: Border.all(color: accentColor, width: 2),
+                                              image: _urlImagen != null && _urlImagen!.isNotEmpty
+                                                  ? DecorationImage(image: NetworkImage(_urlImagen!), fit: BoxFit.cover)
+                                                  : null,
+                                              boxShadow: [BoxShadow(color: accentColor.withOpacity(0.3), blurRadius: 10)]
+                                          ),
+                                          child: _urlImagen == null || _urlImagen!.isEmpty
+                                              ? const Icon(Icons.storefront_rounded, color: Colors.white, size: 28)
+                                              : null,
+                                        ),
+                                        Positioned(
+                                          bottom: -2, right: -2,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                                color: accentBlue,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(color: const Color(0xFF1A0A3D), width: 2)
+                                            ),
+                                            child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 12),
+                                          ),
+                                        )
+                                      ],
                                     ),
-                                    child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 26),
                                   ),
-                                  const SizedBox(width: 14),
+                                  const SizedBox(width: 16),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           _nombreController.text.isEmpty ? "Cargando..." : _nombreController.text,
-                                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
+                                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -166,7 +244,6 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
                                       ],
                                     ),
                                   ),
-                                  // Badge "Solo lectura"
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                     decoration: BoxDecoration(
@@ -189,10 +266,9 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
                                   ? const Center(child: CircularProgressIndicator(color: Colors.white))
                                   : SingleChildScrollView(
                                 physics: const BouncingScrollPhysics(),
-                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 90), // Espacio inferior para la navbar
+                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
                                 child: Column(
                                   children: [
-                                    // Banner info premium
                                     Container(
                                       padding: const EdgeInsets.all(16),
                                       decoration: BoxDecoration(
@@ -206,7 +282,7 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: Text(
-                                              "Para modificar estos datos, por favor, ponte en contacto con el administrador de la plataforma.",
+                                              "Pulsa sobre la foto arriba para actualizar la imagen de tu local. Para el resto de datos, contacta al administrador.",
                                               style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8), height: 1.4),
                                             ),
                                           ),
@@ -215,36 +291,11 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
                                     ),
                                     const SizedBox(height: 20),
 
-                                    _buildGlassInfoCard(
-                                      icon: Icons.storefront_rounded,
-                                      label: "Nombre del Local",
-                                      controller: _nombreController,
-                                      iconColor: accentColor,
-                                    ),
-                                    _buildGlassInfoCard(
-                                      icon: Icons.location_on_rounded,
-                                      label: "Dirección Completa",
-                                      controller: _direccionController,
-                                      iconColor: const Color(0xFFFF9800), // Naranja vivo
-                                    ),
-                                    _buildGlassInfoCard(
-                                      icon: Icons.map_rounded,
-                                      label: "Zona o Ciudad",
-                                      controller: _zonaController,
-                                      iconColor: accentBlue,
-                                    ),
-                                    _buildGlassInfoCard(
-                                      icon: Icons.schedule_rounded,
-                                      label: "Horario Comercial",
-                                      controller: _horarioController,
-                                      iconColor: Colors.greenAccent, // Verde neón
-                                    ),
-                                    _buildGlassInfoCard(
-                                      icon: Icons.content_cut_rounded,
-                                      label: "Descripción / Estilo",
-                                      controller: _descripcionController,
-                                      iconColor: accentLilac, // Lila
-                                    ),
+                                    _buildGlassInfoCard(icon: Icons.storefront_rounded, label: "Nombre del Local", controller: _nombreController, iconColor: accentColor),
+                                    _buildGlassInfoCard(icon: Icons.location_on_rounded, label: "Dirección Completa", controller: _direccionController, iconColor: const Color(0xFFFF9800)),
+                                    _buildGlassInfoCard(icon: Icons.map_rounded, label: "Zona o Ciudad", controller: _zonaController, iconColor: accentBlue),
+                                    _buildGlassInfoCard(icon: Icons.schedule_rounded, label: "Horario Comercial", controller: _horarioController, iconColor: Colors.greenAccent),
+                                    _buildGlassInfoCard(icon: Icons.content_cut_rounded, label: "Descripción / Estilo", controller: _descripcionController, iconColor: accentLilac),
                                   ],
                                 ),
                               ),
@@ -264,7 +315,6 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
     );
   }
 
-  // --- WIDGET: TARJETA DE INFORMACIÓN DE CRISTAL ---
   Widget _buildGlassInfoCard({
     required IconData icon,
     required String label,
@@ -276,15 +326,14 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05), // Cristal muy sutil
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
       ),
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 44, height: 44,
             decoration: BoxDecoration(
               color: iconColor.withOpacity(0.15),
               borderRadius: BorderRadius.circular(12),
@@ -313,7 +362,6 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
     );
   }
 
-  // --- EFECTO CRISTAL EN LA NAVBAR ---
   Widget _buildGlassmorphicNavBar() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(40),
@@ -330,7 +378,7 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(Icons.home_rounded, false, () => Navigator.pop(context)),
-              _buildNavItem(Icons.storefront_rounded, true, () {}), // Marcado activo
+              _buildNavItem(Icons.storefront_rounded, true, () {}),
               _buildNavItem(Icons.settings_rounded, false, () {
                 Navigator.pushReplacement(context, MaterialPageRoute(
                   builder: (_) => SettingsScreen(idCliente: widget.idUsuarioBarbero),
@@ -350,7 +398,7 @@ class _MiBarberiaScreenState extends State<MiBarberiaScreen> {
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isActive ? accentColor.withOpacity(0.2) : Colors.transparent, // Resalte rosa sutil
+          color: isActive ? accentColor.withOpacity(0.2) : Colors.transparent,
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: isActive ? accentColor : Colors.white70, size: 26),

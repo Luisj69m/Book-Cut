@@ -213,7 +213,7 @@ class _BarberHomeScreenState extends State<BarberHomeScreen> {
                             icon: Icons.content_cut_rounded,
                             color: const Color(0xFFB388FF), // Lila
                             onTap: () => Navigator.push(context, MaterialPageRoute(
-                              // ✅ AÑADIDO EL PARÁMETRO CORRECTAMENTE
+
                               builder: (_) => ServicesBarberScreen(idUsuarioBarbero: widget.idUsuarioBarbero),
                             )),
                           ),

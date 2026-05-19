@@ -10,7 +10,7 @@ const String TOKEN_KEY = 'token';
 class ApiService {
 
   // ==========================================
-  // 🔐 1. GESTIÓN DEL TOKEN (NUEVO)
+  //  1. GESTIÓN DEL TOKEN (NUEVO)
   // ==========================================
   Future<void> _guardarToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
@@ -33,7 +33,7 @@ class ApiService {
     if (token != null) {
       return {
         "Content-Type": "application/json",
-        "Authorization": "Bearer $token" // <-- La llave VIP de Iván
+        "Authorization": "Bearer $token"
       };
     } else {
       return {"Content-Type": "application/json"};
@@ -49,7 +49,7 @@ class ApiService {
   }
 
   // ==========================================
-  // 🔓 2. ENDPOINTS PÚBLICOS (Sin Token)
+  //  2. ENDPOINTS PÚBLICOS (Sin Token)
   // ==========================================
 
   Future<Map<String, dynamic>> login(String email, String password) async {
@@ -77,11 +77,11 @@ class ApiService {
       print(" BODY: ${response.body}");
 
       if (response.statusCode == 200) {
-        // 1. Decodificamos el JSON que nos manda Iván
+        // 1. Decodificamos el JSON
         final Map<String, dynamic> data = jsonDecode(response.body);
 
         // 2. Extraemos el token del JSON
-        // (OJO: Asegúrate de que Iván llama a la variable "token" en su backend)
+
         final String? token = data['token'];
 
         // 3. GUARDAMOS EL TOKEN EN LA CAJA FUERTE DEL MÓVIL
@@ -90,9 +90,10 @@ class ApiService {
           await prefs.setString('token', token);
           await prefs.setString('email_usuario', data['usuario']['correoElectronico']);
           await prefs.setString('rol_usuario', data['usuario']['rolUsuario']);
+          await prefs.setInt('id_usuario', data['usuario']['idUsuario']);
           print(" TOKEN GUARDADO CON ÉXITO EN EL MÓVIL");
         } else {
-          print("⚠ AVISO: El login fue bien, pero el servidor no envió ningún 'token'.");
+          print(" AVISO: El login fue bien, pero el servidor no envió ningún 'token'.");
         }
 
         // 4. Devolvemos los datos del usuario (id, rol, etc)
@@ -118,12 +119,12 @@ class ApiService {
       "nombre": nombre,
       "apellidos": apellidos,
       "correoElectronico": email,
-      "contrasenaUsuario": password, // <-- ¡Corregido!
+      "contrasenaUsuario": password,
       "telefono": telefono,
       "rolUsuario": rol
     };
 
-    // 2. LA PRUEBA PARA IVÁN (Imprimimos antes de enviar)
+    // Imprimimos antes de enviar
     print(" --- INICIO PETICIÓN FRONTEND --- ");
     print(" URL EXACTA: $url");
     print(" HEADERS EXACTOS: {'Content-Type': 'application/json'}");
@@ -137,7 +138,7 @@ class ApiService {
         body: jsonEncode(bodyAEnviar),
       );
 
-      // 3. LA PRUEBA DEL SERVIDOR (Imprimimos lo que responde Render)
+      // 3. PRUEBA DEL SERVIDOR
       print(" --- RESPUESTA DEL SERVIDOR --- ");
       print(" STATUS CODE: ${response.statusCode}");
       print(" BODY DEL SERVIDOR: ${response.body}");
@@ -151,7 +152,7 @@ class ApiService {
       throw Exception("Error HTTP ${response.statusCode}: ${response.body}");
 
     } catch (e) {
-      // 4. EL DETECTOR DE MENTIRAS (Captura fallos internos de Dart/Flutter)
+
       print(" --- EXCEPCIÓN INTERNA EN DART --- ");
       print(" TIPO DE ERROR: ${e.runtimeType}");
       print(" DETALLE DEL ERROR: $e");
@@ -162,56 +163,33 @@ class ApiService {
   }
 
   // ==========================================
-  // 🔒 3. ENDPOINTS PROTEGIDOS (Con Token)
+  //  3. ENDPOINTS PROTEGIDOS (Con Token)
   // ==========================================
 
-  Future<void> reservarCita(dynamic cita) async {
-    final url = "${ApiConfig.baseUrl}/api/citas/crear"; // Asegúrate de que esta es la ruta correcta de Iván
+  // CREAR CITA
 
+  Future<bool> crearCita(int idBarberia, int idServicio, int idBarbero, String fechaHora) async {
     try {
-      final headers = await _getHeaders();
-
-      print("🚀 ENVIANDO RESERVA A: $url");
-      print("📦 DATOS ENVIADOS: ${jsonEncode(cita.toJson())}");
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
 
       final response = await http.post(
-        Uri.parse(url),
-        headers: headers,
-        body: jsonEncode(cita.toJson()),
+        Uri.parse('${ApiConfig.baseUrl}/api/citas/crear'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          "idBarberia": idBarberia,
+          "idServicio": idServicio,
+          "idBarbero": idBarbero,
+          "fechaHoraCita": fechaHora
+        }),
       );
 
-      print("📥 RESPUESTA SERVIDOR: ${response.statusCode}");
-      print("📄 BODY: ${response.body}");
-
-      _verificarExpiracion(response);
-
-      // 🛡️ ESCUDO ANTI-ERRORES MEJORADO (400 y 500)
-      if (response.statusCode == 400 || response.statusCode == 500) {
-        String mensajeError = "Error desconocido en el servidor";
-        final cuerpoRespuesta = utf8.decode(response.bodyBytes);
-
-        try {
-          // Intentamos leerlo como JSON (Lo ideal si Iván lo programa así)
-          final Map<String, dynamic> errorMap = jsonDecode(cuerpoRespuesta);
-          mensajeError = errorMap['mensaje'] ?? errorMap['error'] ?? 'Error de validación al reservar';
-        } catch (e) {
-          // Si el servidor "escupe" texto plano (como el error que te dio)
-          // Atrapamos el texto directamente para no romper el jsonDecode
-          mensajeError = cuerpoRespuesta.isNotEmpty ? cuerpoRespuesta : "Error del servidor al procesar la cita";
-        }
-
-        // Lanzamos el error hacia la pantalla
-        throw Exception(mensajeError);
-      }
-
-      // Si no es 200 ni 201, y tampoco es 400 o 500, lanzamos error genérico
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception("Error del servidor (${response.statusCode})");
-      }
-
+      return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
-      // Limpiamos el prefijo "Exception: " para que el SnackBar quede bonito
-      throw Exception(e.toString().replaceAll('Exception: ', ''));
+      throw Exception('Error al crear cita: $e');
     }
   }
 
@@ -221,17 +199,17 @@ class ApiService {
     final url = "${ApiConfig.baseUrl}/api/citas/historial/$idUsuario";
     try {
       final headers = await _getHeaders();
-      print("🔍 Llamando a GET Citas: $url");
-      print("🔑 Headers enviados: $headers"); // Para ver si el token viaja bien
+      print(" Llamando a GET Citas: $url");
+      print(" Headers enviados: $headers"); // Para ver si el token viaja bien
 
       final response = await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 10));
       _verificarExpiracion(response);
 
-      print("📩 Respuesta del servidor: Código ${response.statusCode}");
-      print("📄 Cuerpo de la respuesta: ${response.body}");
+      print(" Respuesta del servidor: Código ${response.statusCode}");
+      print(" Cuerpo de la respuesta: ${response.body}");
 
       if (response.statusCode == 200) {
-        // Si el cuerpo está vacío o algo raro, lo controlamos
+        // Si el cuerpo está vacío , lo controlamos
         if (response.body.isEmpty) return [];
         return jsonDecode(response.body);
       } else if (response.statusCode == 204) {
@@ -239,7 +217,7 @@ class ApiService {
         return [];
       }
 
-      // AQUÍ ESTÁ LA MAGIA: Si falla, escupimos el código de error para verlo en el cartelito rojo
+
       throw Exception("Error ${response.statusCode}: ${response.body}");
     } catch (e) {
       rethrow;
@@ -247,13 +225,13 @@ class ApiService {
   }
 
   // ==========================================
-  // 📅 OBTENER CITAS DEL BARBERO POR ESTADO
+  //  OBTENER CITAS DEL BARBERO POR ESTADO
   // ==========================================
   Future<List<dynamic>> getCitasPorBarbero(int idUsuario, String estado) async {
-    // 🚨 ARREGLADO: Añadido el "/api" que faltaba en la ruta
+
     final url = "${ApiConfig.baseUrl}/api/citas/barbero/$idUsuario/$estado";
 
-    print("🔍 Buscando citas (Estado: $estado) en: $url");
+    print(" Buscando citas (Estado: $estado) en: $url");
 
     try {
       final headers = await _getHeaders();
@@ -267,20 +245,43 @@ class ApiService {
       } else if (response.statusCode == 204) {
         return []; // Lista vacía, no hay citas pendientes
       } else {
-        print("⚠️ Error del servidor cargando citas: ${response.statusCode}");
+        print("⚠ Error del servidor cargando citas: ${response.statusCode}");
         return [];
       }
     } catch (e) {
-      print("🚨 Error en getCitasPorBarbero: $e");
+      print(" Error en getCitasPorBarbero: $e");
       return [];
     }
   }
 
+  Future<List<dynamic>> getBarberosPorBarberia(int idBarberia) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/api/barberos/barberia/$idBarberia'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception("Error al cargar barberos: ${response.statusCode}");
+      }
+    } catch (e) {
+      throw Exception('Error en getBarberosPorBarberia: $e');
+    }
+  }
+
   // ==========================================
-  // 🕒 OBTENER HORAS OCUPADAS (Para el calendario del cliente)
+  //  OBTENER HORAS OCUPADAS (Para el calendario del cliente)
   // ==========================================
   Future<List<String>> getHorasOcupadas(int idBarbero, String fecha) async {
-    // 🚨 ARREGLADO: Añadido el "/api" que faltaba
+    //  ARREGLADO: Añadido el "/api" que faltaba
     final url = "${ApiConfig.baseUrl}/api/citas/barbero/$idBarbero/fecha/$fecha";
 
     try {
@@ -306,16 +307,15 @@ class ApiService {
       }
       return [];
     } catch (e) {
-      print("🚨 Error cargando horas ocupadas: $e");
+      print(" Error cargando horas ocupadas: $e");
       return [];
     }
   }
 
   // ==========================================
-  // 🏪 (NUEVO) OBTENER TODAS LAS CITAS DE UN LOCAL
+  //  OBTENER TODAS LAS CITAS DE UN LOCAL
   // ==========================================
-  // Iván ha creado este endpoint también. Por si en el futuro quieres
-  // que el dueño vea TODAS las citas de su local, aquí tienes la función lista:
+
   Future<List<dynamic>> getCitasPorBarberia(int idBarberia) async {
     final url = "${ApiConfig.baseUrl}/api/citas/barberia/$idBarberia";
 
@@ -333,24 +333,24 @@ class ApiService {
       }
       return [];
     } catch (e) {
-      print("🚨 Error en getCitasPorBarberia: $e");
+      print(" Error en getCitasPorBarberia: $e");
       return [];
     }
   }
 
   // ==========================================
-  // 🔄 ACTUALIZAR ESTADO DE LA CITA
+  //  ACTUALIZAR ESTADO DE LA CITA
   // ==========================================
   Future<bool> actualizarEstadoCita(int idCita, String estado) async {
-    // 🚨 ARREGLADO: Añadimos el "/api" que faltaba
+    //  ARREGLADO: Añadimos el "/api" que faltaba
     final url = "${ApiConfig.baseUrl}/api/citas/$idCita/estado";
 
-    print("🔄 Intentando cambiar cita $idCita a estado: $estado");
-    print("🔗 URL: $url");
+    print(" Intentando cambiar cita $idCita a estado: $estado");
+    print(" URL: $url");
 
     try {
       final headers = await _getHeaders();
-      // Ojo: Como enviamos un texto plano ("ACEPTADA"), le decimos al servidor que es texto
+
       headers["Content-Type"] = "text/plain";
 
       final response = await http.put(
@@ -361,9 +361,9 @@ class ApiService {
 
       _verificarExpiracion(response);
 
-      print("📥 Respuesta servidor: ${response.statusCode}");
+      print(" Respuesta servidor: ${response.statusCode}");
 
-      // 🛡️ ESCUDO ANTI-ERRORES 400
+
       if (response.statusCode == 400) {
         String mensajeError = "Error al actualizar";
         try {
@@ -377,7 +377,7 @@ class ApiService {
 
       return response.statusCode == 200;
     } catch (e) {
-      print("🚨 Error actualizando estado: $e");
+      print(" Error actualizando estado: $e");
       if (e.toString().contains("Exception:")) {
         throw Exception(e.toString().replaceAll('Exception: ', ''));
       }
@@ -389,29 +389,28 @@ class ApiService {
   Future<bool> rechazarCita(int idCita) => actualizarEstadoCita(idCita, "RECHAZADA");
 
   // --- COMPLETAR CITA ---
-  // Llama a la ruta genérica de estado que hicimos antes
+  // Llama a la ruta genérica de estado
   Future<bool> completarCita(int idCita) => actualizarEstadoCita(idCita, "COMPLETADA");
 
   // --- CANCELAR CITA ---
-  // Iván especificó en su documento (Punto 4) que la cancelación tiene su propia ruta
+
   Future<bool> cancelarCitaDefinitiva(int idCita) async {
     final url = "${ApiConfig.baseUrl}/api/citas/cancelar/$idCita";
-    print("🚫 Intentando cancelar cita en: $url");
+    print(" Intentando cancelar cita en: $url");
 
     try {
       final headers = await _getHeaders();
       final response = await http.put(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 10));
 
-      print("📥 Respuesta de cancelación: ${response.statusCode}");
-      print("📄 Body completo: ${response.body}");
+      print(" Respuesta de cancelación: ${response.statusCode}");
+      print(" Body completo: ${response.body}");
 
-      // 200 o 204 → éxito limpio
+
       if (response.statusCode == 200 || response.statusCode == 204) {
         return true;
       }
 
-      // 400 con "Authentication failed" → bug de Iván post-cancelación,
-      // la cita SÍ se canceló en BD, lo tratamos como éxito
+
       if (response.statusCode == 400) {
         try {
           final Map<String, dynamic> errorMap = jsonDecode(utf8.decode(response.bodyBytes));
@@ -420,7 +419,7 @@ class ApiService {
             print("⚠ cancelación exitosa pero falla el correo.");
             return true; // La cita está cancelada en BD, devolvemos éxito
           }
-          // Otro 400 real (ej: fecha pasada) → lanzamos el mensaje de Iván
+
           throw Exception(errorMap['mensaje'] ?? errorMap['error'] ?? 'No se pudo cancelar la cita');
         } catch (e) {
           if (e.toString().contains('authentication') || e.toString().contains('Authentication')) {
@@ -432,12 +431,12 @@ class ApiService {
 
       throw Exception("Error del servidor (${response.statusCode})");
     } catch (e) {
-      print("🚨 Error cancelando cita: $e");
+      print(" Error cancelando cita: $e");
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
   // ==========================================
-  // ⚙️ 4. GESTIÓN DE SERVICIOS (ADMIN)
+  // ⚙ GESTIÓN DE SERVICIOS (ADMIN)
   // ==========================================
 
   // GET: Listar todos los servicios
@@ -449,7 +448,7 @@ class ApiService {
       _verificarExpiracion(response);
 
       if (response.statusCode == 200) {
-        // Usamos utf8.decode para evitar problemas con las tildes/ñ en los nombres
+
         return jsonDecode(utf8.decode(response.bodyBytes));
       }
       return [];
@@ -458,17 +457,15 @@ class ApiService {
     }
   }
 
+
   // ==========================================
-  // ✂️ OBTENER SERVICIOS DE UNA BARBERÍA ESPECÍFICA
-  // ==========================================
-  // ==========================================
-  // ✂️ OBTENER SERVICIOS DE UNA BARBERÍA ESPECÍFICA
+  //  OBTENER SERVICIOS DE UNA BARBERÍA ESPECÍFICA
   // ==========================================
   Future<List<dynamic>> getServiciosPorBarberia(int idBarberia) async {
     final url = "${ApiConfig.baseUrl}/api/servicios/barberia/$idBarberia";
 
-    print("🔍 Pidiendo servicios para la barbería ID: $idBarberia");
-    print("🔗 URL: $url");
+    print(" Pidiendo servicios para la barbería ID: $idBarberia");
+    print(" URL: $url");
 
     try {
       final headers = await _getHeaders();
@@ -476,28 +473,28 @@ class ApiService {
 
       _verificarExpiracion(response);
 
-      // 👇 ¡AQUÍ ESTÁ EL CAMBIO! Aceptamos el 204 como algo bueno
+
       if (response.statusCode == 200) {
         if (response.body.isEmpty) return [];
         final data = jsonDecode(utf8.decode(response.bodyBytes));
-        print("📦 SERVICIOS RECIBIDOS: $data");
+        print(" SERVICIOS RECIBIDOS: $data");
         return data;
       } else if (response.statusCode == 204) {
-        print("ℹ️ La barbería $idBarberia no tiene servicios todavía (204).");
+        print("ℹ La barbería $idBarberia no tiene servicios todavía (204).");
         return [];
       } else {
-        print("⚠️ Error del servidor. Código: ${response.statusCode}");
+        print(" Error del servidor. Código: ${response.statusCode}");
         return [];
       }
     } catch (e) {
-      print("🚨 Error cargando servicios de la barbería: $e");
+      print(" Error cargando servicios de la barbería: $e");
       return [];
     }
   }
 
   // POST: Crear nuevo servicio en la barbería del trabajador.
   // `duracionMinutos` es OBLIGATORIO: el motor de citas lo usa para detectar solapamientos.
-  // Confirmado por Iván el 2026-05-05.
+
   Future<void> crearServicio(int idBarberia, String nombre, double precio, int duracionMinutos) async {
     final url = "${ApiConfig.baseUrl}/api/servicios/barberia/$idBarberia";
     final headers = await _getHeaders();
@@ -507,8 +504,8 @@ class ApiService {
       "precioServicio": precio,
       "duracionMinutos": duracionMinutos,
     });
-    print("🔍 POST crear servicio en: $url");
-    print("📦 Datos enviados: $bodyCodificado");
+    print(" POST crear servicio en: $url");
+    print(" Datos enviados: $bodyCodificado");
 
     final response = await http.post(
       Uri.parse(url),
@@ -516,8 +513,8 @@ class ApiService {
       body: bodyCodificado,
     ).timeout(const Duration(seconds: 10));
 
-    print("📩 Respuesta: ${response.statusCode}");
-    print("📄 Body: ${response.body}");
+    print(" Respuesta: ${response.statusCode}");
+    print(" Body: ${response.body}");
     _verificarExpiracion(response);
 
     if (response.statusCode != 200 && response.statusCode != 201) {
@@ -569,20 +566,41 @@ class ApiService {
   }
 
   // ==========================================
-  // 💰 5. FACTURACIÓN E INGRESOS (ADMIN)
+  //  5. FACTURACIÓN E INGRESOS (ADMIN)
   // ==========================================
+
   Future<Map<String, dynamic>> getResumenFacturacion() async {
-    final url = "${ApiConfig.baseUrl}/api/admin/facturacion/resumen"; // ← /api/ añadido
     try {
-      final headers = await _getHeaders();
-      final response = await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 10));
-      _verificarExpiracion(response);
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final url = '${ApiConfig.baseUrl}/api/admin/facturacion/resumen';
+
+      print('--------------------------------------------------');
+      print(' CHIVATO FACTURACIÓN: Solicitando resumen...');
+      print(' URL: $url');
+      print(' Token enviado: ${token.isNotEmpty ? "SÍ" : "NO"}');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      print(' Status Code: ${response.statusCode}');
+      print(' Response Body: ${response.body}');
+      print('--------------------------------------------------');
+
       if (response.statusCode == 200) {
-        return jsonDecode(utf8.decode(response.bodyBytes));
+        return jsonDecode(response.body);
+      } else {
+        throw Exception("Error ${response.statusCode}: ${response.body}");
       }
-      throw Exception("Error al cargar la facturación");
     } catch (e) {
-      throw Exception("Fallo de conexión al cargar ingresos: $e");
+      print(' Excepción en getResumenFacturacion: $e');
+      throw Exception('Error al obtener facturación: $e');
     }
   }
 
@@ -597,7 +615,7 @@ class ApiService {
 
       _verificarExpiracion(response);
 
-      // 🛡️ ESCUDO ANTI-ERRORES 400
+      //  ESCUDO ANTI-ERRORES 400
       if (response.statusCode == 400) {
         final Map<String, dynamic> errorMap = jsonDecode(utf8.decode(response.bodyBytes));
         String mensajeError = errorMap['mensaje'] ?? errorMap['error'] ?? 'No puedes completar esta cita todavía';
@@ -616,29 +634,27 @@ class ApiService {
   // ==========================================
   //  7. RECUPERACIÓN DE CONTRASEÑA (Públicos)
   // ==========================================
-  // ==========================================
-  // 🔑 SOLICITAR RECUPERACIÓN DE CONTRASEÑA
-  // ==========================================
+
   Future<bool> solicitarRecuperacionPassword(String email) async {
     final url = "${ApiConfig.baseUrl}/api/usuarios/solicitar-recuperacion";
 
-    print("🔑 Solicitando recuperación para: $email");
+    print(" Solicitando recuperación para: $email");
 
     try {
-      // 🚨 ¡AQUÍ ESTÁ LA MAGIA! Cambiado a http.post
+
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'}, // Le decimos que enviamos JSON
-        body: jsonEncode({'correoElectronico': email}), // El cuerpo exacto que pide Iván
+        body: jsonEncode({'correoElectronico': email}),
       ).timeout(const Duration(seconds: 10));
 
-      print("📥 Respuesta recuperación: ${response.statusCode}");
+      print(" Respuesta recuperación: ${response.statusCode}");
 
-      // Si todo va bien (Iván debería devolver un 200)
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         return true;
       }
-      // 🛡️ Escudo Anti-Errores (Por si el correo no existe, error 400 o 404)
+
       else if (response.statusCode == 400 || response.statusCode == 404) {
         String mensajeError = "No se pudo solicitar la recuperación";
         try {
@@ -652,8 +668,8 @@ class ApiService {
         throw Exception("Error del servidor (${response.statusCode})");
       }
     } catch (e) {
-      print("🚨 Error en recuperación: $e");
-      // Limpiamos el error para que salga bonito en el SnackBar
+      print(" Error en recuperación: $e");
+
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
@@ -672,12 +688,12 @@ class ApiService {
         body: bodyCodificado,
       ).timeout(const Duration(seconds: 10));
 
-      print("📩 Respuesta del servidor: Código ${response.statusCode}");
-      print("📄 Cuerpo de la respuesta: ${response.body}");
+      print(" Respuesta del servidor: Código ${response.statusCode}");
+      print(" Cuerpo de la respuesta: ${response.body}");
 
       if (response.statusCode == 200) return true;
 
-      // Intentamos extraer el mensaje de error de Iván
+      // Intentamos extraer el mensaje de error
       try {
         final body = jsonDecode(utf8.decode(response.bodyBytes));
         final mensaje = body['mensaje'] ?? body['error'];
@@ -687,13 +703,13 @@ class ApiService {
       throw Exception("Código incorrecto o expirado (${response.statusCode})");
 
     } catch (e) {
-      print("❌ Error de Flutter: $e");
+      print(" Error de Flutter: $e");
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
 
   // ==========================================
-  // 👤 PERFIL DE USUARIO
+  //  PERFIL DE USUARIO
   // ==========================================
 
   // Obtener los datos del perfil (GET)
@@ -705,17 +721,17 @@ class ApiService {
 
       if (email.isEmpty) throw Exception("No hay correo guardado en sesión");
 
-      // 2. Montamos la URL exacta que pidió Iván
+      // 2. Montamos la URL exacta
       final url = "${ApiConfig.baseUrl}/api/usuarios/perfil/$email";
 
       final headers = await _getHeaders();
-      print("🔍 --- PEDIENDO PERFIL --- 🔗 URL: $url");
+      print(" --- PEDIENDO PERFIL --- 🔗 URL: $url");
 
       final response = await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 10));
       _verificarExpiracion(response);
 
-      print("📥 STATUS PERFIL: ${response.statusCode}");
-      print("📄 BODY PERFIL: ${response.body}");
+      print(" STATUS PERFIL: ${response.statusCode}");
+      print(" BODY PERFIL: ${response.body}");
 
       if (response.statusCode == 200) {
         return jsonDecode(utf8.decode(response.bodyBytes));
@@ -723,7 +739,7 @@ class ApiService {
       throw Exception("Error del servidor (${response.statusCode})");
 
     } catch (e) {
-      print("🚨 ERROR EN PERFIL: $e");
+      print(" ERROR EN PERFIL: $e");
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
@@ -750,32 +766,32 @@ class ApiService {
 
   Future<bool> eliminarCuenta(int idCliente) async {
 
-    // 1️⃣ EL ARREGLO DE LA URL: Añadimos el "/api" que faltaba
+
     final url = Uri.parse('${ApiConfig.baseUrl}/api/usuarios/eliminar/$idCliente');
 
     try {
-      // 2️⃣ LA LLAVE MAESTRA: Recuperamos el token JWT que guardamos al hacer Login
+      //Recuperamos el token JWT que guardamos al hacer Login
       final prefs = await SharedPreferences.getInstance();
       final String token = prefs.getString('token') ?? '';
 
-      print("🗑️ --- INICIO BORRADO DE CUENTA --- 🗑️");
-      print("🔗 URL: $url");
-      print("🔑 TOKEN ENVIADO: Bearer $token");
+      print(" --- INICIO BORRADO DE CUENTA --- 🗑");
+      print(" URL: $url");
+      print(" TOKEN ENVIADO: Bearer $token");
 
       final response = await http.delete(
         url,
-        // 3⃣ LA CABECERA: Le pasamos el token al "guardia de seguridad" de Iván
+
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
         },
       );
 
-      print(" --- RESPUESTA SERVIDOR --- 📥");
+      print(" --- RESPUESTA SERVIDOR --- ");
       print(" STATUS: ${response.statusCode}");
       print(" BODY: ${response.body}");
 
-      // Iván dice que devuelve 200 OK si todo va bien
+
       if (response.statusCode == 200) {
         return true;
       } else {
@@ -794,11 +810,11 @@ class ApiService {
       final url = "${ApiConfig.baseUrl}/api/barberias/mi-barberia/$idUsuarioBarbero";
       final headers = await _getHeaders();
 
-      print("🔍 Pidiendo datos de barbería a: $url");
+      print(" Pidiendo datos de barbería a: $url");
       final response = await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        if (response.body.isEmpty) return null; // Por si Iván devuelve un 200 pero vacío
+        if (response.body.isEmpty) return null;
         return jsonDecode(utf8.decode(response.bodyBytes));
       } else if (response.statusCode == 404) {
         // Si devuelve 404 significa que el barbero aún no ha creado su local
@@ -806,7 +822,7 @@ class ApiService {
       }
       return null;
     } catch (e) {
-      print("🚨 Error obteniendo barbería: $e");
+      print(" Error obteniendo barbería: $e");
       return null;
     }
   }
@@ -817,60 +833,60 @@ class ApiService {
       final url = "${ApiConfig.baseUrl}/api/barberias/mi-barberia/$idUsuarioBarbero";
       final headers = await _getHeaders();
 
-      print("📤 Enviando datos de barbería a: $url");
+      print("Enviando datos de barbería a: $url");
       final response = await http.put(
           Uri.parse(url),
           headers: headers,
           body: jsonEncode(datos)
       ).timeout(const Duration(seconds: 10));
 
-      print("📥 Respuesta del servidor: ${response.statusCode}");
+      print(" Respuesta del servidor: ${response.statusCode}");
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
-      print("🚨 Error actualizando barbería: $e");
+      print(" Error actualizando barbería: $e");
       return false;
     }
   }
   // ==========================================
-  // 🏪 OBTENER TODAS LAS BARBERÍAS (VERSIÓN DETECTIVE)
+  //  OBTENER TODAS LAS BARBERÍAS
   // ==========================================
   Future<List<dynamic>> getTodasLasBarberias() async {
     final url = "${ApiConfig.baseUrl}/api/barberias";
 
-    print("🚀 1. Iniciando petición a Barberías...");
-    print("🔗 2. URL de destino: $url");
+    print(" 1. Iniciando petición a Barberías...");
+    print(" 2. URL de destino: $url");
 
     try {
-      print("⏳ 3. Preparando Headers (buscando token en memoria)...");
+      print(" 3. Preparando Headers (buscando token en memoria)...");
       final headers = await _getHeaders();
-      print("✅ 4. Headers listos. Disparando GET...");
+      print(" 4. Headers listos. Disparando GET...");
 
       final response = await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 10));
 
-      print("📥 5. ¡Respuesta del servidor recibida!");
-      print("🔥 STATUS CODE: ${response.statusCode}");
-      print("📄 BODY: ${response.body}");
+      print(" 5. ¡Respuesta del servidor recibida!");
+      print(" STATUS CODE: ${response.statusCode}");
+      print(" BODY: ${response.body}");
 
       if (response.statusCode == 200) {
         if (response.body.isEmpty) {
-          print("⚠️ El servidor devolvió 200 pero la lista está VACÍA.");
+          print(" El servidor devolvió 200 pero la lista está VACÍA.");
           return [];
         }
         return jsonDecode(utf8.decode(response.bodyBytes));
       }
       return [];
     } catch (e) {
-      print("🚨 6. ERROR CATASTRÓFICO en getTodasLasBarberias: $e");
+      print(" 6. ERROR CATASTRÓFICO en getTodasLasBarberias: $e");
       return [];
     }
   }
   // ==========================================
-  // 🏪 OBTENER BARBERÍA ASIGNADA AL TRABAJADOR
+  //  OBTENER BARBERÍA ASIGNADA AL TRABAJADOR
   // ==========================================
   Future<Map<String, dynamic>?> getBarberiaAsignada(String correoBarbero) async {
     final url = "${ApiConfig.baseUrl}/api/barberias/asignada/$correoBarbero";
-    print("🔍 Buscando barbería asignada para el correo: $correoBarbero");
-    print("🔗 URL: $url");
+    print(" Buscando barbería asignada para el correo: $correoBarbero");
+    print(" URL: $url");
 
     try {
       final headers = await _getHeaders();
@@ -879,15 +895,145 @@ class ApiService {
       if (response.statusCode == 200) {
         if (response.body.isEmpty) return null;
         final data = jsonDecode(utf8.decode(response.bodyBytes));
-        print("📦 DATOS RECIBIDOS: $data");
+        print(" DATOS RECIBIDOS: $data");
         return data;
       } else {
-        print("⚠️ Error del servidor. Código: ${response.statusCode}");
+        print(" Error del servidor. Código: ${response.statusCode}");
         return null;
       }
     } catch (e) {
-      print("🚨 Error de conexión: $e");
+      print(" Error de conexión: $e");
       return null;
     }
   }
+
+
+
+  // ─── FUNCIONES PARA IMÁGENES DE BARBERÍA (CORREGIDAS) ───
+
+  Future<String?> subirImagenBarberia(File imageFile) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      var request = http.MultipartRequest(
+        'POST',
+
+        Uri.parse('${ApiConfig.baseUrl}/api/imagenes/subir'),
+      );
+
+      if (token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      // Añadir el archivo
+      request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+
+      print('Enviando imagen a ${ApiConfig.baseUrl}/api/imagenes/subir...');
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      print('Status code (Subida): ${response.statusCode}');
+      print('Response body (Subida): ${response.body}');
+
+      if (response.statusCode == 200) {
+        var jsonData = jsonDecode(response.body);
+        String urlImagen = jsonData['url'];
+        print('Imagen subida correctamente: $urlImagen');
+        return urlImagen;
+      } else {
+        print(' Error al subir imagen: ${response.statusCode}');
+        print('Body: ${response.body}');
+        throw Exception("Error ${response.statusCode}: ${response.body}");
+      }
+    } catch (e) {
+      print(' Excepción en subirImagenBarberia: $e');
+      throw Exception('Error al subir imagen: $e');
+    }
+  }
+
+  Future<bool> asignarImagenABarberia(int idBarberia, String urlImagen) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      var assignResponse = await http.put(
+
+        Uri.parse('${ApiConfig.baseUrl}/api/imagenes/asignar/$idBarberia'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'urlImagen': urlImagen}),
+      );
+
+      print('Asignación status: ${assignResponse.statusCode}');
+      print('Asignación body: ${assignResponse.body}');
+
+      if (assignResponse.statusCode == 200) {
+        print(' Imagen asignada correctamente en BD');
+        return true;
+      } else {
+        print(' Error al asignar imagen en BD');
+        return false;
+      }
+    } catch (e) {
+      print(' Excepción en asignarImagenABarberia: $e');
+      throw Exception('Error al asignar imagen: $e');
+    }
+  }
+
+
+  // ─── 1. SUBIR FOTO DE PERFIL A SUPABASE ───
+  Future<String?> subirImagenPerfil(File imageFile) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${ApiConfig.baseUrl}/api/imagenes/perfil/subir'),
+      );
+
+      if (token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        var json = jsonDecode(responseData);
+        return json['url']; // Nos devuelve la URL directa de Supabase
+      } else {
+        throw Exception("Error del servidor: $responseData");
+      }
+    } catch (e) {
+      throw Exception('Error al subir foto de perfil: $e');
+    }
+  }
+
+  // ─── 2. ASIGNAR LA URL AL PERFIL DEL USUARIO ───
+  Future<bool> asignarImagenPerfil(String urlImagen) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final response = await http.put(
+        Uri.parse('${ApiConfig.baseUrl}/api/imagenes/perfil/asignar'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'urlFotoPerfil': urlImagen}),
+      );
+
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      throw Exception('Error al asignar foto de perfil: $e');
+    }
+  }
+
 }

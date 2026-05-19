@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import '../utils/glass_toast.dart'; // ✅ IMPORTAMOS NUESTRO TOAST PREMIUM
+import '../utils/glass_toast.dart';
 import 'settings_screen.dart';
 
 class BarberAcceptedAppointmentsScreen extends StatefulWidget {

@@ -237,7 +237,7 @@ class _SuccessClientScreenState extends State<SuccessClientScreen> with SingleTi
 
 // ==========================================================
 // WIDGET PERSONALIZADO: BOTÓN DESLIZANTE (Swipe To Start)
-// (Sin modificaciones, funciona perfectamente igual)
+//
 // ==========================================================
 class SwipeToStartButton extends StatefulWidget {
   final VoidCallback onSwipeComplete;
