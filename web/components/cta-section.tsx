@@ -130,13 +130,16 @@ export function CTASection() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <Button 
-                  size="lg"
-                  className="neon-button bg-salmon hover:bg-salmon/90 text-white font-bold text-base sm:text-lg px-8 sm:px-10 py-6 sm:py-7 w-full sm:w-auto animate-pulse-glow"
-                >
-                  <Download className="w-5 h-5 mr-2" />
-                  Descargar APK Ahora
-                </Button>
+                {/*  Descarga Final */}
+                <a href="/bookcut.apk" download="BookCut.apk" className="block w-full sm:inline-block sm:w-auto">
+                  <Button 
+                    size="lg"
+                    className="neon-button bg-salmon hover:bg-salmon/90 text-white font-bold text-base sm:text-lg px-8 sm:px-10 py-6 sm:py-7 w-full sm:w-auto animate-pulse-glow"
+                  >
+                    <Download className="w-5 h-5 mr-2" />
+                    Descargar APK Ahora
+                  </Button>
+                </a>
               </motion.div>
             </motion.div>
 

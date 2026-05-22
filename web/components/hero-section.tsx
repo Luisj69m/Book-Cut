@@ -105,7 +105,7 @@ export function HeroSection() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          {/*  BOTÓN DE DESCARGA 1: Menú Desktop */}
+          {/* BOTÓN DE DESCARGA 1: Menú Desktop */}
           <a href="/bookcut.apk" download="BookCut.apk">
             <Button className="hidden md:flex neon-button bg-salmon hover:bg-salmon/90 text-white font-semibold">
               Descargar APK
@@ -155,7 +155,7 @@ export function HeroSection() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
             >
-              {/*  BOTÓN DE DESCARGA 2: Menú Móvil */}
+              {/* BOTÓN DE DESCARGA 2: Menú Móvil */}
               <a
                 href="/bookcut.apk"
                 download="BookCut.apk"
@@ -222,7 +222,7 @@ export function HeroSection() {
             className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 sm:px-0"
           >
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              {/*  BOTÓN DE DESCARGA 3: Botón Principal Central */}
+              {/* BOTÓN DE DESCARGA 3: Botón Principal Central */}
               <a
                 href="/bookcut.apk"
                 download="BookCut.apk"
@@ -237,13 +237,16 @@ export function HeroSection() {
               </a>
             </motion.div>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                size="lg"
-                variant="outline"
-                className="glass-card border-glass-border text-foreground hover:bg-glass hover:text-foreground px-6 sm:px-8 py-5 sm:py-6 w-full sm:w-auto"
-              >
-                Ver cómo funciona
-              </Button>
+              {/* ✅ BOTÓN REPARADO: Ver cómo funciona */}
+              <a href="#barberos" className="block w-full sm:inline-block sm:w-auto">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="glass-card border-glass-border text-foreground hover:bg-glass hover:text-foreground px-6 sm:px-8 py-5 sm:py-6 w-full sm:w-auto"
+                >
+                  Ver cómo funciona
+                </Button>
+              </a>
             </motion.div>
           </motion.div>
 
