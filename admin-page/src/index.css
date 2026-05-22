@@ -1,0 +1,512 @@
+/* Importamos una fuente moderna y elegante desde Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+}
+
+body {
+  margin: 0;
+  background-color: #f4f7fb; /* Un gris-azulado muy claro y limpio */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Animación fluida al abrir las pantallas */
+.animar-entrada {
+  animation: deslizarArriba 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes deslizarArriba {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Efecto de elevación para las tarjetas (Dashboard) */
+.tarjeta-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.tarjeta-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+}
+
+/* Inputs de texto elegantes que brillan al hacer clic */
+.input-moderno {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  background-color: #f9fafb;
+}
+.input-moderno:focus {
+  outline: none;
+  border-color: #381483;
+  box-shadow: 0 0 0 4px rgba(56, 20, 131, 0.15);
+  background-color: #ffffff;
+}
+
+/* Botón con efecto de click y sombra */
+.boton-primario {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #381483 0%, #5a26c4 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(56, 20, 131, 0.3);
+}
+.boton-primario:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 15px rgba(56, 20, 131, 0.4);
+}
+
+/* Efecto del menú lateral */
+.enlace-nav {
+  padding: 12px 15px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: block;
+}
+.enlace-nav:hover {
+  background-color: rgba(255,255,255,0.15);
+  padding-left: 20px; /* Se mueve un poco hacia la derecha al pasar el ratón */
+}
+
+/* --- ESTILOS PARA TABLAS MODERNAS --- */
+.contenedor-tabla {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  overflow: hidden;
+  margin-top: 20px;
+  animation: deslizarArriba 0.5s ease forwards;
+}
+
+.tabla-moderna {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.tabla-moderna th {
+  background-color: #f9fafb;
+  color: #6b7280;
+  font-weight: 600;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+
+.tabla-moderna td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  font-size: 14px;
+}
+
+.tabla-moderna tr:hover {
+  background-color: #f9fafb;
+}
+
+/* --- BADGES (Etiquetas de colores) --- */
+.badge {
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+}
+.badge-admin { background-color: #fee2e2; color: #b91c1c; } /* Rojo */
+.badge-barbero { background-color: #e0e7ff; color: #3730a3; } /* Morado */
+.badge-cliente { background-color: #d1fae5; color: #065f46; } /* Verde */
+
+/* Contenedor tipo tarjeta para los formularios */
+.tarjeta-formulario {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  animation: deslizarArriba 0.5s ease forwards;
+}
+
+.mensaje-alerta {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 16px 24px;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: entrarDerecha 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes entrarDerecha {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.alerta-exito { background-color: #10b981; }
+.alerta-error { background-color: #ef4444; }
+
+/* --- MODO OSCURO GLOBAL (VERSIÓN MEJORADA) --- */
+
+/* Fondo principal */
+body.dark-theme {
+  background-color: #111827 !important;
+}
+
+/* 1. Forzar fondos oscuros en tarjetas y contenedores claros */
+body.dark-theme .tarjeta-formulario,
+body.dark-theme .tarjeta-hover,
+body.dark-theme .contenedor-tabla,
+body.dark-theme [style*="background-color: white"],
+body.dark-theme [style*="background-color: #f9fafb"],
+body.dark-theme [style*="background-color: rgb(249, 250, 251)"] {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+  box-shadow: none !important;
+}
+
+/* 2. Forzar textos claros en todas las etiquetas de texto principales */
+body.dark-theme h1, 
+body.dark-theme h2, 
+body.dark-theme h3, 
+body.dark-theme h4,
+body.dark-theme h5, 
+body.dark-theme p, 
+body.dark-theme td, 
+body.dark-theme th, 
+body.dark-theme label {
+  color: #e5e7eb !important;
+}
+
+/* 3. "Cazador de Colores": Si un texto tiene estos colores oscuros, lo volvemos blanco */
+body.dark-theme [style*="color: #111827"],
+body.dark-theme [style*="color: rgb(17, 24, 39)"],
+body.dark-theme [style*="color: #4b5563"], /* Soluciona "Total registros" */
+body.dark-theme [style*="color: rgb(75, 85, 99)"] {
+  color: #e5e7eb !important;
+}
+
+/* 4. Textos secundarios (Gris medio pasa a gris clarito) */
+body.dark-theme [style*="color: #6b7280"],
+body.dark-theme [style*="color: rgb(107, 114, 128)"] {
+  color: #9ca3af !important;
+}
+
+/* 5. Inputs de formularios y Selectores */
+body.dark-theme .input-moderno {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+  color: #f9fafb !important;
+}
+body.dark-theme select option {
+  background-color: #1f2937;
+  color: #f9fafb;
+}
+
+/* 6. Ajustes específicos para las Tablas */
+body.dark-theme .tabla-moderna th {
+  background-color: #374151 !important;
+  border-bottom: 1px solid #4b5563 !important;
+}
+body.dark-theme .tabla-moderna td {
+  border-bottom: 1px solid #374151 !important;
+}
+body.dark-theme .tabla-moderna tr:hover {
+  background-color: #374151 !important;
+}
+body.dark-theme .recharts-cartesian-grid-horizontal line {
+  stroke: #374151 !important;
+}
+body.dark-theme .recharts-text {
+  fill: #9ca3af !important;
+}
+body.dark-theme .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: #1f2937 !important;
+  border: 1px solid #374151 !important;
+  color: #e5e7eb !important;
+}
+/* --- Ajustes para el Calendario en Modo Oscuro --- */
+body.dark-theme .contenedor-calendario {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+}
+body.dark-theme .rbc-calendar {
+  color: #e5e7eb !important;
+}
+body.dark-theme .rbc-header,
+body.dark-theme .rbc-month-view, 
+body.dark-theme .rbc-time-view, 
+body.dark-theme .rbc-agenda-view,
+body.dark-theme .rbc-day-bg,
+body.dark-theme .rbc-month-row,
+body.dark-theme .rbc-time-content,
+body.dark-theme .rbc-time-header-content,
+body.dark-theme .rbc-timeslot-group,
+body.dark-theme .rbc-day-slot .rbc-time-slot {
+  border-color: #374151 !important;
+}
+body.dark-theme .rbc-off-range-bg {
+  background-color: #111827 !important;
+}
+body.dark-theme .rbc-today {
+  background-color: #374151 !important;
+}
+body.dark-theme .rbc-btn-group button {
+  color: #e5e7eb !important;
+  border-color: #4b5563 !important;
+}
+body.dark-theme .rbc-btn-group button.rbc-active {
+  background-color: #4b5563 !important;
+  color: white !important;
+}
+/* --- ESTILOS PARA LOS BOTONES TOGGLE (Vista Tabla/Agenda) --- */
+.boton-toggle {
+  padding: 8px 16px;
+  background-color: #f3f4f6;
+  color: #4b5563 !important; /* Forzamos color para que el cazador no lo rompa en modo claro */
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.boton-toggle.izquierdo {
+  border-radius: 6px 0 0 6px;
+}
+.boton-toggle.derecho {
+  border-radius: 0 6px 6px 0;
+  border-left: none;
+}
+.boton-toggle.activo {
+  background-color: #111827;
+  color: white !important;
+  border-color: #111827;
+}
+
+/* Modo oscuro para estos botones específicos */
+body.dark-theme .boton-toggle {
+  background-color: #1f2937 !important;
+  color: #9ca3af !important;
+  border-color: #374151 !important;
+}
+body.dark-theme .boton-toggle.activo {
+  background-color: #4b5563 !important;
+  color: white !important;
+  border-color: #4b5563 !important;
+}
+/* --- LAYOUT PRINCIPAL (ESCRITORIO) --- */
+.layout-principal {
+  display: flex;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+.contenido-principal {
+  flex-grow: 1;
+  overflow-y: auto;
+  min-width: 0;
+  width: 0; /* truquito flex: fuerza al contenido a no ser más ancho que su flex-grow */
+}
+
+/* --- BARRA SUPERIOR MÓVIL --- */
+.barra-movil {
+  display: none;
+  align-items: center;
+  gap: 15px;
+  padding: 14px 20px;
+  background-color: #2e1065;
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.boton-hamburguesa {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}
+.overlay-menu {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 999;
+}
+
+/* --- RESPONSIVE MÓVIL --- */
+@media (max-width: 768px) {
+  /* Layout principal en móvil: bloque simple, sidebar fuera del flujo */
+  .layout-principal {
+    display: block;
+  }
+  .contenido-principal {
+    width: 100%;
+    min-width: 0;
+    overflow-y: visible;
+  }
+
+  /* Barra superior visible solo en móvil */
+  .barra-movil { display: flex; }
+
+  /* Sidebar como panel deslizante */
+  .barra-lateral {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 260px !important;
+    height: 100vh !important;
+    z-index: 1000 !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.3s ease;
+  }
+  .barra-lateral.menu-abierto {
+    transform: translateX(0) !important;
+  }
+
+  /* Tablas con scroll horizontal */
+  .contenedor-tabla {
+    overflow-x: auto;
+  }
+  .tabla-moderna {
+    min-width: 600px;
+  }
+
+  /* Formularios: campos apilados en móvil */
+  div[style*="display: flex"][style*="gap"] > div[style*="flex: 1"],
+  div[style*="display: flex"][style*="gap"] > div[style*="flex: 3"] {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+  }
+
+  /* Páginas con padding reducido */
+  div[style*="padding: '40px'"],
+  div[style*="padding: 40px"] {
+    padding: 15px !important;
+  }
+
+  /* Tarjetas del dashboard apiladas */
+  div[style*="minWidth: '200px'"],
+  div[style*="min-width: 200px"] {
+    min-width: 140px !important;
+  }
+
+  /* Login: recuadro con margen para que se vea el fondo degradado */
+  .tarjeta-login {
+    width: calc(100% - 48px) !important;
+    padding: 36px 28px !important;
+    border-radius: 16px !important;
+  }
+
+  /* Formularios: filas de dos columnas → apiladas en móvil */
+  .fila-formulario {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .fila-formulario > input,
+  .fila-formulario > div {
+    flex: unset !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Dashboard: grid de 2 columnas → apilado en móvil */
+  .grid-dashboard {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Dashboard: fila de tarjetas → dos columnas en móvil */
+  .fila-tarjetas {
+    gap: 12px !important;
+  }
+  .fila-tarjetas > div {
+    min-width: calc(50% - 6px) !important;
+    flex: 1 1 calc(50% - 6px) !important;
+    padding: 18px !important;
+  }
+  .fila-tarjetas > div p[style] {
+    font-size: 26px !important;
+  }
+
+  /* Calendario: toolbar apilada */
+  .rbc-toolbar {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start !important;
+  }
+  .rbc-toolbar-label {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* Cabecera de páginas con filtros */
+  div[style*="justifyContent: 'space-between'"] {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+}
+
+/* --- SKELETON LOADERS --- */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+body.dark-theme .skeleton {
+  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* --- ESTILOS PARA EL SCROLL DE LA BARRA DE NAVEGACIÓN --- */
+
+/* Soporte para Firefox */
+.barra-lateral {
+  scrollbar-width: thin;
+  scrollbar-color: #4c1d95 transparent;
+}
+
+/* Soporte para Chrome, Edge y Safari */
+.barra-lateral::-webkit-scrollbar {
+  width: 6px; 
+}
+
+.barra-lateral::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.barra-lateral::-webkit-scrollbar-thumb {
+  background-color: #4c1d95;
+  border-radius: 10px;
+}
+
+.barra-lateral::-webkit-scrollbar-thumb:hover {
+  background-color: #5b21b6; 
+}
