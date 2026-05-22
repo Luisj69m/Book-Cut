@@ -1,0 +1,190 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(0.18 0.08 285);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.22 0.06 285 / 0.4);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.20 0.07 285 / 0.8);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.65 0.22 350);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.50 0.25 285);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.25 0.05 285);
+  --muted-foreground: oklch(0.75 0.03 285);
+  --accent: oklch(0.78 0.12 300);
+  --accent-foreground: oklch(0.15 0.08 285);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.35 0.08 285 / 0.5);
+  --input: oklch(0.25 0.06 285 / 0.6);
+  --ring: oklch(0.65 0.22 350);
+  --chart-1: oklch(0.65 0.22 350);
+  --chart-2: oklch(0.50 0.25 285);
+  --chart-3: oklch(0.78 0.12 300);
+  --chart-4: oklch(0.70 0.18 320);
+  --chart-5: oklch(0.60 0.20 270);
+  --radius: 1rem;
+  --salmon: oklch(0.70 0.15 25);
+  --purple-vibrant: oklch(0.50 0.28 285);
+  --lilac: oklch(0.78 0.12 300);
+  --purple-dark: oklch(0.18 0.08 285);
+  --glass: oklch(0.25 0.06 285 / 0.3);
+  --glass-border: oklch(0.45 0.08 285 / 0.4);
+  --glow-salmon: oklch(0.70 0.15 25 / 0.6);
+  --glow-purple: oklch(0.50 0.28 285 / 0.5);
+}
+
+@theme inline {
+  --font-sans: 'Geist', 'Geist Fallback';
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-salmon: var(--salmon);
+  --color-purple-vibrant: var(--purple-vibrant);
+  --color-lilac: var(--lilac);
+  --color-purple-dark: var(--purple-dark);
+  --color-glass: var(--glass);
+  --color-glass-border: var(--glass-border);
+  --color-glow-salmon: var(--glow-salmon);
+  --color-glow-purple: var(--glow-purple);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Custom Scissors Cursor for Desktop */
+@media (pointer: fine) {
+  html, body {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='%23E96D71' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='6' r='3'/%3E%3Ccircle cx='6' cy='18' r='3'/%3E%3Cline x1='20' y1='4' x2='8.12' y2='15.88'/%3E%3Cline x1='14.47' y1='14.48' x2='20' y2='20'/%3E%3Cline x1='8.12' y1='8.12' x2='12' y2='12'/%3E%3C/svg%3E") 12 12, auto;
+  }
+  
+  a, button, [role="button"], input[type="submit"], .cursor-pointer {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='%23E96D71' stroke='%23E96D71' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='6' r='3'/%3E%3Ccircle cx='6' cy='18' r='3'/%3E%3Cline x1='20' y1='4' x2='8.12' y2='15.88'/%3E%3Cline x1='14.47' y1='14.48' x2='20' y2='20'/%3E%3Cline x1='8.12' y1='8.12' x2='12' y2='12'/%3E%3C/svg%3E") 12 12, pointer;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-glass backdrop-blur-xl border border-glass-border rounded-2xl;
+  }
+  .glow-salmon {
+    box-shadow: 0 0 30px var(--glow-salmon), 0 0 60px var(--glow-salmon);
+  }
+  .glow-purple {
+    box-shadow: 0 0 30px var(--glow-purple), 0 0 60px var(--glow-purple);
+  }
+  .text-gradient {
+    @apply bg-gradient-to-r from-salmon via-lilac to-purple-vibrant bg-clip-text text-transparent;
+  }
+  .neon-button {
+    @apply relative overflow-hidden;
+    box-shadow: 0 0 20px var(--glow-salmon), 0 0 40px var(--glow-salmon), inset 0 0 20px oklch(0.70 0.15 25 / 0.2);
+    transition: all 0.3s ease;
+  }
+  .neon-button:hover {
+    box-shadow: 0 0 30px var(--glow-salmon), 0 0 60px var(--glow-salmon), 0 0 100px var(--glow-salmon), inset 0 0 30px oklch(0.70 0.15 25 / 0.3);
+  }
+  
+  /* Floating Animation */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  .animate-float-delayed {
+    animation: float 6s ease-in-out infinite;
+    animation-delay: 2s;
+  }
+  
+  /* Pulse Glow Animation */
+  @keyframes pulse-glow {
+    0%, 100% { 
+      box-shadow: 0 0 20px var(--glow-salmon), 0 0 40px var(--glow-salmon);
+    }
+    50% { 
+      box-shadow: 0 0 40px var(--glow-salmon), 0 0 80px var(--glow-salmon), 0 0 120px var(--glow-salmon);
+    }
+  }
+  .animate-pulse-glow {
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+  
+  /* Shimmer Effect */
+  @keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+  .animate-shimmer {
+    background: linear-gradient(90deg, transparent, oklch(0.98 0 0 / 0.1), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 3s infinite;
+  }
+  
+  /* Gradient Move Animation */
+  @keyframes gradient-move {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-move 5s ease infinite;
+  }
+  
+  /* Spin Slow */
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .animate-spin-slow {
+    animation: spin-slow 20s linear infinite;
+  }
+  
+  /* Scale Pulse */
+  @keyframes scale-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  .animate-scale-pulse {
+    animation: scale-pulse 4s ease-in-out infinite;
+  }
+}
