@@ -237,7 +237,7 @@ export function HeroSection() {
               </a>
             </motion.div>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              {/* ✅ BOTÓN REPARADO: Ver cómo funciona */}
+              {/*  */}
               <a href="#barberos" className="block w-full sm:inline-block sm:w-auto">
                 <Button
                   size="lg"

@@ -90,8 +90,9 @@ export function AppShowcase() {
                   viewport={{ once: true }}
                   transition={{ duration: 1, ease: "easeOut" }}
                 >
+                  {/*  IMAGEN ACTUALIZADA A ALTA CALIDAD */}
                   <Image
-                    src="/app-screenshot-login.jpg"
+                    src="/login.png"
                     alt="Book&Cut App - Pantalla de inicio de sesión"
                     width={280}
                     height={600}
@@ -103,8 +104,9 @@ export function AppShowcase() {
             </motion.div>
 
             {/* Floating elements around phone */}
+            {/*  CAJITA SEGURO REPOSICIONADA HACIA AFUERA  */}
             <motion.div
-              className="absolute -top-4 -right-4 sm:-right-8 glass-card p-3 rounded-xl"
+              className="absolute -top-6 -right-6 sm:-right-16 lg:-right-20 z-20 glass-card p-3 rounded-xl"
               initial={{ opacity: 0, scale: 0 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
@@ -121,8 +123,9 @@ export function AppShowcase() {
               </div>
             </motion.div>
 
+            {/*  CAJITA RÁPIDO REPOSICIONADA HACIA AFUERA */}
             <motion.div
-              className="absolute -bottom-4 -left-4 sm:-left-8 glass-card p-3 rounded-xl"
+              className="absolute -bottom-6 -left-6 sm:-left-16 lg:-left-20 z-20 glass-card p-3 rounded-xl"
               initial={{ opacity: 0, scale: 0 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
